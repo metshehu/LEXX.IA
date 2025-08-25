@@ -1,0 +1,463 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  font-family: "Poppins", sans-serif;
+}
+
+body {
+  background-color: #f3f4f6;
+  color: #333;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.struc {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.chat-container {
+  position: relative; /* Ensure the container is the reference for absolute positioning */
+
+  display: flex;
+  flex-direction: column;
+  flex: 5;
+}
+/* General Styling */
+body {
+  background-color: #2e0d3b; /* Dark purple */
+  font-family: "Poppins", sans-serif;
+  color: #fff;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.fileupload-container {
+  text-align: center;
+}
+
+/* Underline Styling */
+.fileupload-container .underline {
+  position: relative;
+  display: inline-block;
+  font-weight: 500;
+  font-size: 1.5rem; /* Adjust size if needed */
+  color: #ccc; /* Text color */
+  margin-bottom: 1rem;
+}
+
+.fileupload-container .underline::after {
+  content: "";
+  position: absolute;
+  bottom: -5px; /* Adjust distance from text */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%; /* Adjust underline width */
+  height: 2px; /* Adjust underline thickness */
+  background-color: #aaa; /* Adjust underline color */
+  border-radius: 2px; /* Add rounded corners to the line */
+}
+
+/* File Grid */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Exactly 2 columns */
+  gap: 15px; /* Space between items */
+  justify-content: center;
+  align-items: start;
+  padding: 10px;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  overflow-y: auto; /* Enable vertical scrolling */
+}
+
+/* Make it responsive: Switch to a single column on small screens */
+@media (max-width: 600px) {
+  .file-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+/* Individual File Block */
+.file {
+  background-color: #ccc;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #333;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  min-width: 120px; /* Ensure consistent file block size */
+  min-height: 150px; /* Maintain consistent height */
+  max-width: 120px;
+  max-height: 150px;
+
+  overflow: hidden; /* Hide any overflowing text */
+}
+.file img {
+  max-width: 40px;
+  margin-bottom: 0.5rem;
+}
+
+.file p {
+  margin: 0;
+  overflow: hidden; /* Hide any overflowing text */
+  text-overflow: ellipsis; /* Add ellipsis when text overflows */
+  width: 100%; /* Ensure the width is controlled */
+  display: inline-block;
+}
+
+/* Word File Styling */
+.file.word {
+  border: 1px solid blue;
+}
+
+/* Highlighted Word File */
+.file.word.highlighted {
+  border: 2px solid #0056ff; /* Blue border */
+  background-color: #eaf4ff; /* Light blue background */
+  color: #0056ff; /* Blue text */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* PDF File Styling */
+.file.pdf {
+  border: 1px solid red; /* Red border */
+  color: #cc0000; /* Dark red text */
+}
+
+/* Optional: Add a hover effect */
+.file.pdf:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(255, 0, 0, 0.2); /* Red glow effect */
+}
+
+/* Highlighted File */
+.file.add {
+  background-color: #d9d9d9;
+  font-size: 2rem;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #555;
+  cursor: pointer;
+  min-height: 150px; /* Match other file blocks' height */
+}
+.file.add:hover {
+  background-color: #c1c1c1; /* Slightly darker gray on hover */
+}
+
+/* Hover Effect for File */
+.file:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.underline {
+  position: relative;
+  display: inline-block;
+  font-weight: 500;
+  font-size: 1.5rem; /* Adjust size if needed */
+  color: #ccc; /* Text color */
+  text-align: center;
+}
+
+.underline::after {
+  content: "";
+  position: absolute;
+  bottom: -5px; /* Adjust distance from text */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%; /* Adjust underline width */
+  height: 2px; /* Adjust underline thickness */
+  background-color: #aaa; /* Adjust underline color */
+  border-radius: 2px; /* Add rounded corners to the line */
+}
+
+/* Highlighted File */
+.highlighted {
+  border: 2px solid #0056ff; /* Blue border */
+  background-color: #e7f1ff; /* Light blue */
+}
+
+/* Add File Block */
+.file.add {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #333;
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.file.add:hover {
+  background-color: #ddd;
+}
+
+/* Hover Effect */
+.file:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #190026;
+  color: #fff;
+  padding: 15px;
+  font-size: 1.2rem;
+}
+
+.chat-header h3 {
+  margin: 0;
+}
+
+.chat-header .h22 {
+  margin: 0;
+}
+
+.file_img {
+  width: 50px;
+  height: 50px;
+}
+.settings-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.dot-wrapper {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+.chat-box {
+  flex: 1;
+  padding: 15px;
+  overflow-y: auto;
+  background-color: #190026;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border-radius: 20px;
+  display: inline-block;
+  width: 100%;
+}
+
+.received {
+  display: flex;
+  justify-content: flex-end;
+}
+.exLayer {
+  background: #403848;
+  max-width: calc(100% - 30%);
+  word-wrap: break-word;
+  color: #ffffff;
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.aiimg {
+  width: 40px;
+  height: 40px;
+}
+.sent {
+  background: #190026;
+  color: white;
+  align-self: flex-end;
+  max-width: calc(100% - 30%);
+  word-wrap: break-word;
+  display: flex;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease; /* Smooth transition */
+}
+.sent:hover {
+  transform: translateY(-10px); /* Move the div up by 10px */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2); /* Add a shadow for a "pop-up" effect */
+}
+
+.sent p {
+  margin-left: 1%;
+}
+.chat-input {
+  padding: 15px;
+  background-color: #190026;
+  height: 15%;
+}
+
+.chat-input input {
+  background-color: #4b4b5a; /* Input background */
+  color: #e5e5e5; /* Text color */
+  border: none; /* No border */
+  border-radius: 20px; /* Rounded corners */
+  margin-top: 50px;
+  height: 50%; /* Set the height */
+  padding-left: 15px; /* Space for text on the left */
+  width: 70%; /* Set width */
+  margin-left: 15%;
+  font-size: 16px; /* Adjust text size */
+  outline: none; /* Remove default focus outline */
+  box-sizing: border-box; /* Ensures padding doesn't affect width/height */
+}
+
+.chat-input button {
+  background: #7b68ee;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin-left: 10px;
+  border-radius: 20px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.chat-input button:hover {
+  background: #3b41c5;
+}
+
+.vertical-line {
+  width: 1px;
+  background: #d1d5db;
+}
+
+.fileupload-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 15px;
+  background: #190026;
+  width: 10%;
+}
+
+.upload-button {
+  background: #7b68ee;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.upload-button:hover {
+  background: #3b41c5;
+}
+
+@media (max-width: 768px) {
+  .struc {
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .vertical-line {
+    display: none;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px; /* Width of the scrollbar */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #6a5acd; /* Color of the scrollbar thumb */
+  border-radius: 5px; /* Rounded corners for the scrollbar thumb */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #483d8b; /* Darker color when hovering */
+}
+
+::-webkit-scrollbar-track {
+  background: #e6e6fa; /* Background color of the scrollbar track */
+  border-radius: 5px; /* Rounded corners for the track */
+}
+
+/* Optional: Apply styles to specific containers only */
+.fileupload-body::-webkit-scrollbar,
+.chat-box::-webkit-scrollbar {
+  width: 8px; /* Adjust scrollbar width for specific containers */
+}
+
+.fileupload-body::-webkit-scrollbar-thumb,
+.chat-box::-webkit-scrollbar-thumb {
+  background-color: #6962ad; /* Thumb color for these containers */
+}
+.loading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.7); /* Black background with transparency */
+  color: white; /* White text */
+  padding: 15px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column; /* Stack elements vertically */
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  text-align: center;
+  width: 200px; /* Set a fixed width for the loading indicator */
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #8479e1;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 10px; /* Space between the spinner and text */
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.hidden {
+  display: none;
+}

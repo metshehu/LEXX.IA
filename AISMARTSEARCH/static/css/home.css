@@ -1,0 +1,107 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #190026;
+  font-family: "Poppins", sans-serif;
+}
+
+.chat-header {
+  background: #190026;
+  position: absolute;
+
+  color: #fff;
+  padding: 10px;
+  font-size: 1.2rem;
+}
+
+.container {
+  display: flex;
+  flex-direction: column; /* Ensures elements stack vertically */
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.select-list {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 10px;
+  background-color: #12001a;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.user-card {
+  background-color: #260040;
+  color: #fff;
+  padding: 15px 25px;
+  border-radius: 5px;
+  border-width: thick;
+  border-color: red;
+  cursor: pointer;
+  font-size: 16px;
+  text-align: center;
+  width: 120px;
+  display: block;
+  text-decoration: none;
+}
+
+.user-card:hover {
+  background-color: #555;
+}
+
+.user-photo {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  margin-bottom: 10px;
+  border-radius: 50%;
+}
+
+.user-name {
+  font-size: 14px;
+  text-align: center;
+}
+
+.add-button {
+  text-decoration: none;
+  background-color: #260040;
+  color: #fff;
+  padding: 15px 25px;
+  cursor: pointer;
+  font-size: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60px;
+  height: 80%;
+  border-radius: 5px;
+}
+
+.add-button:hover {
+  background-color: #0056b3;
+}
+
+/* New styles for Manage Users button */
+.manage-users-container {
+  margin-top: 80px; /* Adds space between the select-list and the button */
+}
+
+.manage-users-button {
+  text-decoration: none;
+  background-color: #260040;
+  color: #fff;
+  padding: 15px 30px;
+  cursor: pointer;
+  font-size: 18px;
+  border-radius: 5px;
+  text-align: center;
+  display: inline-block;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.manage-users-button:hover {
+  background-color: #5c0a99; /* Darker purple for hover effect */
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix User Selection</title>
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+        <div class="chat-header">
+            <h3>Met.AI</h3>
+        </div>
+ 
+   <div class="container">
+
+       <div class="select-list">
+            {% for user, photo in combined %}
+                <a href="/chat/{{ user }}" class="user-card">
+                    <img src="{% static 'userphotos/'|add:photo %}" alt="{{ user }}" class="user-photo">
+                    <div class="user-name">{{ user }}</div>
+                </a>
+            {% endfor %}
+
+        </div>
+  
+        <!-- Manage Users button -->
+        <div class="manage-users-container">
+            <a class="manage-users-button" href="/Manage-Users" >Manage Users</a>
+        </div>
+    </div>
+</body>
+</html>
+
+
+
