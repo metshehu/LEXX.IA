@@ -7,17 +7,19 @@ import shutil
 from itertools import chain
 from os import walk
 from pathlib import Path
-import numpy as np 
 
+import numpy as np
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
+from FileServis import FileServices
+from Main import Parsers
 from openai import OpenAI
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -25,9 +27,6 @@ from reportlab.platypus import ListFlowable, ListItem, Paragraph, SimpleDocTempl
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
-from FileServis import FileServices
-from Main import Parsers
 
 from .forms import FileUploadForm, MakeDirForm, UserValueForm
 from .models import Chunk, ContractState, History, UserValues
@@ -47,29 +46,42 @@ def clear_all_contract_fields():
 
     print(f"Cleared 'fields' for {count} ContractState records.")
 
+    from django.http import JsonResponse
+
 
 def print_all_users(request):
-
     username = "qerimqerimAi"
-    user, created = User.objects.get_or_create(username=username)
+    password = "hello123"
 
-    cs, _ = ContractState.objects.get_or_create(user=user)
+    # Delete user (and ContractState via CASCADE)
+    try:
+        user = User.objects.get(username=username)
+        user.delete()
+        print(f"Deleted user {username} and related objects.")
+    except User.DoesNotExist:
+        print(f"User {username} did not exist, skipping delete.")
+
+    # Recreate user
+    new_user = User.objects.create_user(username=username, password=password)
+    ContractState.objects.create(user=new_user)
+    print(f"Recreated user {username} with password {password}")
+
+    # Get all users
     users = User.objects.all()
-
     if not users:
         print("No users found.")
-        return
+        return JsonResponse({"1": []})
 
     print("All Django users:")
-    username = []
+    usernames = []
     for user in users:
-        print(user)  # prints <User: username>
-        username.append(user.username)
+        print(user)
+        usernames.append(user.username)
         print(
             f"ID: {user.id}, Username: {user.username}, Email: {user.email}, Is Staff: {user.is_staff}"
         )
-    clear_all_contract_fields()
-    return JsonResponse({"1": username})
+
+    return JsonResponse({"1": usernames})
 
 
 def getalldirs(mypath):
@@ -569,6 +581,7 @@ def add_guidelines():
     print(long_text[:150])
     return long_text
 
+
 def convert_ndarray_to_list(obj):
     """
     Recursively convert all numpy arrays to lists in a nested structure.
@@ -581,6 +594,7 @@ def convert_ndarray_to_list(obj):
         return obj.tolist()
     else:
         return obj
+
 
 def context_aware_responses(query, law_data, ak_data, case_data, data, case_info, user):
     # openai.api_key = settings.OPENAI_K
@@ -1026,13 +1040,12 @@ def clean_and_load(content: str):
     return json.loads(content)
 
 
-def json_to_docx(data: dict, filename="legal.docx"):
+def json_to_docx(data: dict, filename="legal.docx", subfolder="my_docs"):
     doc = Document()
     style = doc.styles["Normal"]
     style.font.name = "Times New Roman"
     style.font.size = Pt(12)
-    subfolder = "my_docs"
-    output_dir = os.path.join(settings.BASE_DIR, subfolder)
+    output_dir = os.path.join(settings.GENERATED_FILES, subfolder)
     os.makedirs(output_dir, exist_ok=True)
     full_path = os.path.join(output_dir, filename)
 
@@ -1063,13 +1076,15 @@ def json_to_docx(data: dict, filename="legal.docx"):
                 table.rows[0].cells[i].text = f"{field}: __________"
 
     doc.save(full_path)
+    return full_path
 
 
 def generate_legal_doc_json(text: str, user: str):
     print("JSON CALLED")
 
     contract_state = ContractState.objects.get(user=getuser(user))
-    file_data = json.loads(contract_state.file)# <-- deserialize string back to dict
+    # <-- deserialize string back to dict
+    file_data = json.loads(contract_state.file)
     chunks = "\n".join(file_data.get("chunks", []))
     print("$$$$" * 20)
     system_prompt = """
@@ -1233,11 +1248,17 @@ def write_string_to_docx2(content: str, filename: str = "demo.docx", subfolder: 
     return full_path
 
 
+def download_file(request, user):
+    file_path = os.path.join(settings.GENERATED_FILES, user, "legal.docx")
+    return FileResponse(open(file_path, "rb"), as_attachment=True, filename="legal.docx")
+
+
 # 🔥 Example usage:
 
 
 def chat_front(request, user, query):
     responds = ""
+    genered=False
     mypath = settings.STATIC_UPLOAD_DIR + "/" + user
     text = query  # question passed via URL path
     if text:
@@ -1245,42 +1266,36 @@ def chat_front(request, user, query):
 
         if not state or not state.user_info:
             responds, all_data = asking(user, text)
-            print("LEUKE")
+
         else:
-            print("NOT LEUKE")
             user_contract_data = get_context_data(text, user)
             print("final boss !!!!" * 100)
             print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
 
             responds, all_data = asking(user, text)
-            print("THIS IS ME PLZ SAY IT WORKS " * 100)
             responds = genert_proerpt_contrext(user_contract_data, user)
 
-            print("$" * 50)
-            print(json_respons)
-            print("$" * 50)
-            print("(##(" * 1000)
-            json_respons = generate_legal_doc_json(user_contract_data, user)
-            savedocx = json_to_docx(json_respons)
-            save = write_string_to_docx(responds)
+            json_respons = generate_legal_doc_json(responds, user)
 
-            print("(23(" * 1000)
-            print("PDFPDFPDFPFD" * 1000)
-            savepdf = write_string_to_pdf(responds)
-            print("PDFPDFPDFPFD" * 1000)
+            savedocx = json_to_docx(json_respons, filename="legal.docx", subfolder=user)
+            print(savedocx, "IS THIS THE RELEVT PATH ??")
+
+            # save = write_string_to_docx(responds)
+            # savepdf = write_string_to_pdf(responds)
             # Save history
             state.fields = ""
             state.file = ""  # if you also want to clear the file content
             state.user_info = False
             state.save()
+            genered=True
 
-            chat_message = History(
-                sender=user,
-                question=text,
-                respons=responds,
-            )
-            chat_message.save()
-            saveHitoryChunsk(chat_message, all_data)
+        chat_message = History(
+            sender=user,
+            question=text,
+            respons=responds,
+        )
+        chat_message.save()
+        saveHitoryChunsk(chat_message, all_data)
 
         pdf_files = allFileformat(mypath, ".pdf")
         word_files = allFileformat(mypath, ".docx")
@@ -1288,7 +1303,7 @@ def chat_front(request, user, query):
 
         combined = [{"question": q, "answer": a} for q, a in user_history(user)]
 
-    return JsonResponse({"answer": responds, "history": combined})
+    return JsonResponse({"answer": responds, "history": combined, "Generted": genered})
 
 
 @csrf_exempt
@@ -1306,32 +1321,22 @@ def chat(request, user):
         if not state or not state.user_info:
             responds, all_data = asking(user, text)
         else:
-
-            print("Before reset:", state.user_info)
             state.user_info = False
             state.save()
-
             state2 = ContractState.objects.filter(user=getuser(user)).first()
-            print("After reset:", state2.user_info)
-            print("LENA RETARED -> ", state, "and ->", state.user_info)
             user_contract_data = get_context_data(text, user)
             print("final boss !!!!" * 100)
-
-            print("final boss !!!!" * 100)
-
             print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
             # responds, all_data = genert_template(user, user_contract_data):
-            print("LEUKE")
 
             responds, all_data = asking(user, text)
-
             responds = genert_proerpt_contrext(user_contract_data, user)
-            json_respons = generate_legal_doc_json(responds, user)
-            savedocx = json_to_docx(json_respons)
-            print(json_respons)
-            save = write_string_to_docx(responds)
 
-            save = write_string_to_pdf(responds)
+            json_respons = generate_legal_doc_json(responds, user)
+
+            savedocx = json_to_docx(json_respons)
+            save = write_string_to_docx(responds)
+            savepdf = write_string_to_pdf(responds)
             state.fields = ""
             state.file = ""  # if you also want to clear the file content
             state.user_info = False

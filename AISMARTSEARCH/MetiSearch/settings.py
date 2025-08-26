@@ -19,6 +19,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_UPLOAD_DIR = os.path.join(BASE_DIR, "static/uploads")
 BASE_LAWS = os.path.join(BASE_DIR, "static/BaseLaws")
 CONTRACT_TEMPALTES = os.path.join(BASE_DIR, "static/ContractTemplates")
+
+GENERATED_FILES= os.path.join(BASE_DIR, "static/Generated_File")
+
 USER_INFO = False
 LEAGLEREVIEW = os.path.join(BASE_DIR, "static/LeaglReview")
 # Quick-start development settings - unsuitable for production

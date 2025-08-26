@@ -21,5 +21,6 @@ urlpatterns = [
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/user-values/", views.get_user_values, name="user_values"),
     path("api/upload/<str:user>/", views.fileuploadfront, name="fileupload"),
-    path("hi/",views.print_all_users,name="p")
+    path("hi/",views.print_all_users,name="p"),
+    path("dow/<str:user>",views.download_file,name="d")
 ]
