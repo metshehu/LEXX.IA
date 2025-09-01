@@ -36,6 +36,7 @@ git-filter-repo==2.47.0
 google-auth==2.36.0
 googleapis-common-protos==1.66.0
 grpcio==1.67.1
+gunicorn==23.0.0
 h11==0.14.0
 httpcore==1.0.6
 httptools==0.6.4
@@ -138,6 +139,7 @@ watchfiles==0.24.0
 websocket-client==1.8.0
 websockets==14.1
 wheel==0.45.0
+whitenoise==6.9.0
 wrapt==1.16.0
 yarl==1.17.1
 zipp==3.21.0
