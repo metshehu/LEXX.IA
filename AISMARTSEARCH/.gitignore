@@ -1,6 +1,2 @@
 env/
-*.pdf
-*.csv
 .env
-*.doc
-*.docx
