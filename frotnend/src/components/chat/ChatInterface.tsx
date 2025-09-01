@@ -49,7 +49,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
             try {
                 const response = await fetch(
-                    `http://127.0.0.1:8000/history/${username}`,
+                    `https://lexx-ia.onrender.com/history/${username}`,
                 );
 
                 if (!response.ok) throw new Error("Failed to fetch history");
@@ -104,7 +104,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 let username = localStorage.getItem("name");
                 try {
                     const response = await fetch(
-                        `http://127.0.0.1:8000/api/review/${username}/${reviewFile}`,
+                        `https://lexx-ia.onrender.com/api/review/${username}/${reviewFile}`,
                     );
 
                     const data = await response.json();
@@ -199,7 +199,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             localStorage.setItem("name", username);
         }
 
-        const url = "http://127.0.0.1:8000/api/questions/"; // new POST endpoint
+        const url = "https://lexx-ia.onrender.com/api/questions/"; // new POST endpoint
 
         try {
             const response = await fetch(url, {
@@ -253,7 +253,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         console.log("CONTRACT GENERATED TRIGGERED THANK YOU METI");
         const link = document.createElement("a");
         let username = localStorage.getItem("name");
-        link.href = `http://127.0.0.1:8000/dow/${username}`;
+        link.href = `https://lexx-ia.onrender.com/dow/${username}`;
         link.download = ""; // backend decides filename
         document.body.appendChild(link);
         link.click();

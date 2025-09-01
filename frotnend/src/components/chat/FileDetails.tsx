@@ -28,7 +28,7 @@ interface FileDetailsProps {
         const fetchFiles = async () => {
             try {
                 const res = await fetch(
-                    `http://127.0.0.1:8000/get-files/${user}/${fileType}`,
+                    `https://lexx-ia.onrender.com/get-files/${user}/${fileType}`,
                 );
                 const data = await res.json();
                 setUploadedFiles(data.users.map((name: string) => ({ name })));
@@ -46,7 +46,7 @@ interface FileDetailsProps {
 
         try {
             const res = await fetch(
-                `http://127.0.0.1:8000/api/upload/${user}/${fileType}`,
+                `https://lexx-ia.onrender.com/api/upload/${user}/${fileType}`,
                 { method: "POST", body: formData },
             );
 
@@ -72,7 +72,7 @@ interface FileDetailsProps {
 
     const handleDeleteFile = async (fileName: string) => {
         const response = await fetch(
-            `http://127.0.0.1:8000/api/delete/${user}/${fileName}/${fileType}/`,
+            `https://lexx-ia.onrender.com/api/delete/${user}/${fileName}/${fileType}/`,
             {
                 method: "DELETE",
             },

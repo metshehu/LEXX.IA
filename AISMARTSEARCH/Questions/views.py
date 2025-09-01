@@ -1253,7 +1253,7 @@ def asking(user, query):
     top_law_chunks, top_law_vector, sorted_law_files = system_file_parser_law(
         query_vector, user
     )  # Get_law_data(query_vector)
-    top_law_chunks2, top_law_vector2 = Get_law_data(query_vector)
+    #top_law_chunks2, top_law_vector2 = Get_law_data(query_vector)
     top_ak_chunks, top_ak_chnks, sorted_akt_files = system_file_parserT(
         query_vector, user, settings.INTERNAL_ACT
     )  # Get_aktin_i_brendshem_data(query_vector)
