@@ -1757,18 +1757,28 @@ def chat_front(request):
         state.user_info = False
         state.save()
 
+    responds2 = ""
     if responds_type == "Review":
-        text == "\n-----\n".join(
+        responds2 = "\n-----\n".join(
             f"Batch {batch['batch']}:\nFiles: {', '.join(batch['files'])}\n\n{batch['review']}"
-            for batch in data["answer"]
+            for batch in responds
         )
-    chat_message = History(
-        sender=user,
-        question=text,
-        respons=responds,
-    )
-    chat_message.save()
-    saveHitoryChunsk(chat_message, all_data)
+    if responds_type == "Review":
+        chat_message = History(
+            sender=user,
+            question=text,
+            respons=responds2,
+        )
+        chat_message.save()
+        saveHitoryChunsk(chat_message, all_data)
+    else:
+        chat_message = History(
+            sender=user,
+            question=text,
+            respons=responds,
+        )
+        chat_message.save()
+        saveHitoryChunsk(chat_message, all_data)
 
     pdf_files = allFileformat(mypath, ".pdf")
     word_files = allFileformat(mypath, ".docx")
