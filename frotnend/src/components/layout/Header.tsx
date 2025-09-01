@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ChevronDown, Mail, Lock } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomButton } from "@/components/ui/custom-button";
 import { cn } from "@/lib/utils";
@@ -24,11 +24,14 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const { login, logout, isAuthenticated } = useAuth();
+    const [isSignUpMode, setIsSignUpMode] = useState(false);
+
+    const { login, signup, logout, isAuthenticated } = useAuth();
     const location = useLocation();
 
     useEffect(() => {
@@ -41,19 +44,22 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
         setMobileMenuOpen(false);
     }, [location.pathname]);
 
-    const handleSignIn = async (e?: React.FormEvent) => {
+    const handleAuth = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         setIsLoading(true);
         setError("");
         try {
-            const result = await login(email, password);
+            const result = isSignUpMode
+                ? await signup(email, password)
+                : await login(email, password);
+
             if (result.success) {
                 setIsSignInOpen(false);
             } else {
                 setError(result.message);
             }
         } catch {
-            setError("An error occurred during sign in");
+            setError(`An error occurred during ${isSignUpMode ? "sign up" : "sign in"}`);
         } finally {
             setIsLoading(false);
         }
@@ -63,11 +69,11 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
         { name: "Home", path: "/", dropdown: [] },
         {
             name: "Services",
-            path: "/services",
+            path: "/about",
             dropdown: [
-                { name: "Consulting", path: "/services/consulting" },
-                { name: "Case Review", path: "/services/case-review" },
-                { name: "AI Tools", path: "/services/ai-tools" },
+                { name: "Consulting", path: "/chat" },
+                { name: "Case Review", path: "/chat" },
+                { name: "AI Tools", path: "/about" },
             ],
         },
         { name: "Chat", path: "/chat", dropdown: [] },
@@ -75,12 +81,12 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
             name: "About",
             path: "/about",
             dropdown: [
-                { name: "Our Team", path: "/about/team" },
-                { name: "Mission", path: "/about/mission" },
-                { name: "Careers", path: "/about/careers" },
+                { name: "Our Team", path: "/about" },
+                { name: "Mission", path: "/about" },
+                { name: "Careers", path: "/about" },
             ],
         },
-        { name: "Contact", path: "/contact", dropdown: [] },
+        { name: "Contact", path: "/about", dropdown: [] },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -96,7 +102,6 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
                 {/* Logo */}
                 <Link to="/" className="flex items-center space-x-2">
                     <span className="text-xl font-bold text-black">LEXX.iA</span>
-
                 </Link>
 
                 {/* Center title */}
@@ -141,7 +146,7 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
                         </div>
                     ))}
 
-                    {/* Login */}
+                    {/* Login / Logout */}
                     {isAuthenticated ? (
                         <CustomButton
                             variant="ghost"
@@ -160,9 +165,11 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
                             </DialogTrigger>
                             <DialogContent className="bg-[#3B0E0E] border-none">
                                 <DialogHeader>
-                                    <DialogTitle className="text-white">Sign In</DialogTitle>
+                                    <DialogTitle className="text-white">
+                                        {isSignUpMode ? "Sign Up" : "Sign In"}
+                                    </DialogTitle>
                                 </DialogHeader>
-                                <form className="grid gap-4 py-4" onSubmit={handleSignIn}>
+                                <form className="grid gap-4 py-4" onSubmit={handleAuth}>
                                     <div>
                                         <Label htmlFor="email" className="text-white">Email</Label>
                                         <Input
@@ -185,8 +192,23 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
                                     </div>
                                     {error && <p className="text-red-400">{error}</p>}
                                     <CustomButton type="submit" className="bg-[#A32B3E] text-white">
-                                        {isLoading ? "Signing in..." : "Sign In"}
+                                        {isLoading
+                                            ? isSignUpMode
+                                                ? "Signing up..."
+                                                : "Signing in..."
+                                            : isSignUpMode
+                                                ? "Sign Up"
+                                                : "Sign In"}
                                     </CustomButton>
+                                    <button
+                                        type="button"
+                                        className="text-sm text-blue-300 underline mt-2"
+                                        onClick={() => setIsSignUpMode(!isSignUpMode)}
+                                    >
+                                        {isSignUpMode
+                                            ? "Already have an account? Sign In"
+                                            : "Don’t have an account? Sign Up"}
+                                    </button>
                                 </form>
                             </DialogContent>
                         </Dialog>

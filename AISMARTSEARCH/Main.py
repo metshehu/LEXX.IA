@@ -25,27 +25,42 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 def SaveVector(VectorEmbedList):
-    with open('vector.csv', 'w', newline='') as f:
+    with open("vector.csv", "w", newline="") as f:
         writer = csv.writer(f)
         for value in VectorEmbedList:
             writer.writerow([value])
 
 
 def ReadFromFile(file_path):
-    df = pd.read_csv(file_path, header=None)
-    vector_from_csv = df.values.flatten().tolist()
-    return vector_from_csv
+    # df = pd.read_csv(file_path, header=None,on_bad_lines='skip')
+    try:
+        df = pd.read_csv(
+            file_path,
+            header=None,
+            sep=None,  # auto-detect delimite#r
+            engine="python",  # python engine handles messy files
+            on_bad_lines="skip",  # skip malformed lines
+        )
+        vector_from_csv = df.values.flatten().tolist()
+        return vector_from_csv
+    except Exception as e:
+        # Print which file caused the error and the exception
+        print(f"Error reading file: {file_path}")
+        print(f"Exception: {e}")
+        # Optional: you could return an empty list or re-raise the error
+        return []
 
 
-class Parsers():
+class Parsers:
     def __init__(self, apikey):
         self.apikey = apikey
         self.splitter = TokenTextSplitter(
-            chunk_size=400, chunk_overlap=50, length_function=len)
+            chunk_size=500, chunk_overlap=50, length_function=len)
         # Note make so the user chose it  spliter
         # and chunk size / overlap
         self.embedingAPI = OpenAIEmbeddings(
-            openai_api_key=self.apikey, model="text-embedding-3-large")
+            openai_api_key=self.apikey, model="text-embedding-3-large"
+        )
 
     def SetSpliter(self, spliter, chuncksize, overlap):
         match spliter:
@@ -54,7 +69,8 @@ class Parsers():
                     chunk_size=chuncksize, chunk_overlap=overlap)
             case "RecursiveCharacterTextSplitter":
                 self.splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=chuncksize, chunk_overlap=overlap)
+                    chunk_size=chuncksize, chunk_overlap=overlap
+                )
             case "TokenTextSplitter":
                 self.splitter = TokenTextSplitter(
                     chunk_size=chuncksize, chunk_overlap=overlap)
@@ -67,8 +83,8 @@ class Parsers():
 
     def Print(self, showList):
         for vector in showList:
-            print(str(vector)[:100]+'top')
-            print(str(vector)[len(showList)-100:]+'bottem')
+            print(str(vector)[:100] + "top")
+            print(str(vector)[len(showList) - 100:] + "bottem")
 
     def load_word_document(self, file_path):
         """Extract text from a Word (.docx) file and return as LangChain documents."""
@@ -78,10 +94,10 @@ class Parsers():
         return [text]  # Return as a list for consistency
 
     def loade(self, file_path):
-        documents = ''
-        if file_path.endswith('.pdf'):
+        documents = ""
+        if file_path.endswith(".pdf"):
             loader = PyPDFLoader(file_path)
-        elif file_path.endswith('.docx'):
+        elif file_path.endswith(".docx"):
             loader = Docx2txtLoader(file_path)
         else:
             raise ValueError(
@@ -95,9 +111,10 @@ class Parsers():
         loader = self.loade(file_path)
         documents = loader.load()
 
-        if (file_path.endswith('.docx')):
-            documents = [Document(page_content=doc) if isinstance(
-                doc, str) else doc for doc in documents]
+        if file_path.endswith(".docx"):
+            documents = [
+                Document(page_content=doc) if isinstance(doc, str) else doc for doc in documents
+            ]
 
         chunks = self.splitter.split_documents(documents)
         chunks = [doc.page_content for doc in chunks]
@@ -109,24 +126,40 @@ class Parsers():
         return querry
 
     def SaveCsv(self, file_path, name, vectors, chunks):
-        df = pd.DataFrame({
-            "chunks": chunks,
-            "vectors": vectors
-        })
+        df = pd.DataFrame({"chunks": chunks, "vectors": vectors})
         if not file_path.endswith("/"):
             file_path += "/"
 
-        name = name[:name.index('.')]
-        locat = file_path+name+'.csv'
+        name = name[:name.rindex(".")]
+        locat = file_path + name + ".csv"
         df.to_csv(locat, index=False)
 
     def ReadFromFile(self, file_path):
-        df = pd.read_csv(file_path)
-        chunks = df["chunks"].tolist()
-        vectors = df["vectors"].apply(
-            ast.literal_eval).tolist()  # Convert strings to lists
-        return (chunks, vectors)
+        try:
+            df = pd.read_csv(file_path, engine='python', on_bad_lines='skip')
+        # fallback if column missing
+            chunks = df.get("chunks", pd.Series([])).tolist()
+            vectors = []
+            for v in df.get("vectors", pd.Series([])):
+                try:
+                    vectors.append(ast.literal_eval(v))
+                except Exception as e:
+                    print(f"Skipping bad vector in file {file_path}: {v}")
+                    vectors.append([])  # or None, depending on what you prefer
 
+            return chunks, vectors
+        except Exception as e:
+            print(f"Error reading file: {file_path}")
+            print(f"Exception: {e}")
+            return [], []
+
+
+#    def ReadFromFile(self, file_path):
+#        df = pd.read_csv(file_path, on_bad_lines="skip")
+#        chunks = df["chunks"].tolist()
+#        vectors = df["vectors"].apply(
+#            ast.literal_eval).tolist()  # Convert strings to lists
+#        return (chunks, vectors)
     def cosine_search(self, vectors, query_vector):
         vectors = np.array(vectors)
         query_vector = np.array(query_vector)
@@ -140,23 +173,41 @@ class Parsers():
         yn = max([x, y])
         return (1 - abs(xn - yn) / abs(yn)) * 100
 
+    def cosine_search_topN(self, vectors, query_vector, top_n=3, threshold=20):
+        vectors = np.array(vectors)
+        query_vector = np.array(query_vector).reshape(1, -1)
+
+        distances = cosine_similarity(vectors, query_vector)
+        similarities = distances.flatten() * 100  # convert to 0-100 scale
+
+        # get sorted indices by similarity
+        sorted_indices = np.argsort(similarities)[::-1]
+
+        top_indices = []
+        top_scores = []
+
+        for idx in sorted_indices[:top_n]:
+            if similarities[idx] >= threshold:
+                top_indices.append(idx)
+                top_scores.append(similarities[idx])
+
+        return top_indices, top_scores
+
     def cosine_search_top3(self, vectors, query_vector, threshold=20):
         top_3_indices = []
         vectors = np.array(vectors)
         query_vector = np.array(query_vector)
         query_vector = query_vector.reshape(1, -1)
-
         distances = cosine_similarity(vectors, query_vector)
-
         similarities = distances.flatten() * 100
 
         closest_index = np.argmax(distances)
-        if (similarities[closest_index] < threshold):
+        if similarities[closest_index] < threshold:
             return ([], 0)
         sorted_indices = np.argsort(similarities)[::-1]
 
         for i in range(0, len(sorted_indices[:3])):
-            if (similarities[sorted_indices[i]] >= threshold):
+            if similarities[sorted_indices[i]] >= threshold:
                 top_3_indices.append(sorted_indices[i])
 
         similarities_score = 0
@@ -177,7 +228,10 @@ class Parsers():
         # Reverse for descending order
         sorted_indices = np.argsort(similarities)[::-1]
         top_3_indices = [
-            i for i in sorted_indices if self.similarity_percentage(similarities[i], similarities[closest_index]) >= threshold][:3]
+            i
+            for i in sorted_indices
+            if self.similarity_percentage(similarities[i], similarities[closest_index]) >= threshold
+        ][:3]
         # print(top_3_vectors, " top 3 vectors")
         # print("-"*20)
         # print(top_3_similarities, " top 3 similierts")
@@ -196,8 +250,7 @@ class Parsers():
         closest_index = np.argmax(distances)
         return chunks[closest_index]
 
-
-# ------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------
 
     def Vectoraiz(self, file_path):
         self.file_contet = PyPDFLoader(file_path).load()
@@ -209,6 +262,8 @@ class Parsers():
         vectorEmbedQuery = OpenAIEmbeddings().embed_query(question)
         answer = self.db.similarity_search_by_vector(vectorEmbedQuery)
         return answer
+
+
 # ------------------------------------------------------------------------------------------------
 
 
@@ -219,10 +274,10 @@ if __name__ == "__main__":
     data = np.random.rand(num_samples, dimensionality)
     query_vector = np.random.rand(dimensionality)
 
-# Calculate cosine similarities between the query vector and the dataset
+    # Calculate cosine similarities between the query vector and the dataset
     similarities = cosine_similarity(data, [query_vector])
 
-# Find the most similar vector
+    # Find the most similar vector
     most_similar_index = np.argmax(similarities)
     most_similar_vector = data[most_similar_index]
 

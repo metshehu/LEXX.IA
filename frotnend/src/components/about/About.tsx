@@ -44,7 +44,7 @@ const About: React.FC<AboutProps> = ({ isSignInOpen, setIsSignInOpen }) => {
             </div>
             <div className="bg-black p-6 rounded-xl shadow-lg hover:shadow-[#FB3956]/40 transition">
               <h3 className="text-xl font-semibold text-[#FB3956]">
-                Nadi Dida
+               Qerim Qerimi 
               </h3>
               <p className="text-sm text-gray-300 mt-2">
                 Co-Founder & Head of Product — shaping vision, strategy, and the

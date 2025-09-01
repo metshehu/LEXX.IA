@@ -12,15 +12,19 @@ urlpatterns = [
     path("Manage-User/<str:user>", views.manage_user, name="Mange-user"),
     path("delete-user/<str:user>", views.delet_user, name="delet-user"),
     path("get-chunks/<str:user>/<str:question>", views.getchunksforQuestin, name="chunks"),
-    path("questions/<str:user>/<str:query>", views.chat_front, name="questions"),
+    path("api/questions/", views.chat_front, name="questions"),
     path("history/<str:user>", views.user_history_json, name="user_history"),
-##
     #path("get-cv/<str:user>/", views.get_cv, name="cv"), # get files
     path("api/signup/", views.signup, name="signup"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),  # Login
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/user-values/", views.get_user_values, name="user_values"),
-    path("api/upload/<str:user>/", views.fileuploadfront, name="fileupload"),
+    path("api/upload/<str:user>/<str:fileType>", views.fileuploadfront, name="fileupload"),
     path("hi/",views.print_all_users,name="p"),
-    path("dow/<str:user>",views.download_file,name="d")
+    path("dow/<str:user>",views.download_file,name="d"),
+    path("api/delete/<str:user>/<str:filename>/<str:fileType>/", views.delet_file, name="delete_file"),
+    path("get-files/<str:user>/<str:fileType>",views.get_files,name='get_file'),
+    path("redo/",views.recrate_contract_template,name='redo'),
+    path("api/review/<str:user>/<str:fileName>",views.review_one_file,name='review')
+
 ]

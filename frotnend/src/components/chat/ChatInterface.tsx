@@ -12,6 +12,8 @@ interface ChatInterfaceProps {
     initialMessages?: ChatMessage[];
     useInitialMessages?: boolean;
     isFullScreen?: boolean;
+    reviewFile?: string | null; // 👈 new
+    setreviewFile: (fileName: string) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -19,6 +21,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     initialMessages = mockChatMessages,
     useInitialMessages = false,
     isFullScreen = false,
+    reviewFile,
+    setreviewFile,
 }) => {
     const messagesToUse = useInitialMessages
         ? (initialMessages ?? mockChatMessages)
@@ -45,7 +49,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
             try {
                 const response = await fetch(
-                    `http://127.0.0.1:8000/history/qerimqerimAi`,
+                    `http://127.0.0.1:8000/history/${username}`,
                 );
 
                 if (!response.ok) throw new Error("Failed to fetch history");
@@ -82,6 +86,57 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         scrollToBottom();
     }, [messages]);
 
+    useEffect(() => {
+        if (reviewFile) {
+            // 1️⃣ Create a user message (file review request)
+            const userMessage: ChatMessage = {
+                id: `msg-${Date.now()}`,
+                role: "user",
+                content: `Please review the file: ${reviewFile}`,
+                timestamp: new Date().toISOString(),
+            };
+
+            setMessages((prev) => [...prev, userMessage]);
+            setIsLoading(true);
+
+            // 2️⃣ Call your API
+            const fetchReview = async () => {
+                let username = localStorage.getItem("name");
+                try {
+                    const response = await fetch(
+                        `http://127.0.0.1:8000/api/review/${username}/${reviewFile}`,
+                    );
+
+                    const data = await response.json();
+
+                    // 3️⃣ Add assistant message
+                    const aiMessage: ChatMessage = {
+                        id: `msg-${Date.now()}-review`,
+                        role: "assistant",
+                        content: data?.result || "✅ File reviewed successfully.",
+                        timestamp: new Date().toISOString(),
+                    };
+
+                    setMessages((prev) => [...prev, aiMessage]);
+                } catch (error) {
+                    const errorMessage: ChatMessage = {
+                        id: `msg-${Date.now()}-error`,
+                        role: "assistant",
+                        content: "⚠️ Failed to review file. Please try again.",
+                        timestamp: new Date().toISOString(),
+                    };
+                    setMessages((prev) => [...prev, errorMessage]);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            // Simulate delay (like your input flow)
+            setTimeout(fetchReview, 1500);
+
+            setreviewFile("");
+        }
+    }, [reviewFile]);
     const scrollToBottom = () => {
         const container = messagesEndRef.current?.parentElement;
         if (container) {
@@ -108,7 +163,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         setIsLoading(true);
 
         setTimeout(async () => {
-            const response = await simulateAIResponse(input);
+            const response = await AIResponse(input);
             setMessages((prev) => [...prev, response]);
             setIsLoading(false);
 
@@ -135,9 +190,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }, 1500);
     };
 
-    const simulateAIResponse = async (
-        userInput: string,
-    ): Promise<ChatMessage> => {
+    const AIResponse = async (userInput: string): Promise<ChatMessage> => {
         const encodedQuery = encodeURIComponent(userInput);
         let username = localStorage.getItem("name");
 
@@ -146,29 +199,51 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             localStorage.setItem("name", username);
         }
 
-        const url = `http://127.0.0.1:8000/questions/qerimqerimAi/${encodedQuery}`;
+        const url = "http://127.0.0.1:8000/api/questions/"; // new POST endpoint
 
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    user: username,
+                    query: encodedQuery, // send original text (or decoded) here
+                }),
+            });
+
             const data = await response.json();
 
             if (data.Generted) {
                 console.log("✅ CONTRACT GENERATED READY — SHOWING BUTTON");
                 setShowDownloadButton(true); // show button instead of auto download
             }
+            let content = "";
 
+            if (data.type === "Review" && Array.isArray(data.answer)) {
+                // Join batches with "-----" separator
+                content = data.answer
+                    .map((batch: any) => {
+                        const filesList = batch.files.join(", ");
+                        return `Batch ${batch.batch}:\nFiles: ${filesList}\n\n${batch.review}`;
+                    })
+                    .join("\n-----\n"); // separator between batches
+            } else {
+                content = data.answer;
+            }
             return {
                 id: `msg-${Date.now()}-ai`,
                 role: "assistant",
-                content: data.answer,
+                content: content,
                 timestamp: new Date().toISOString(),
             };
         } catch (error) {
-            console.error("Error talking to AI:", error);
+            console.error("❌ Error fetching chat response:", error);
             return {
                 id: `msg-${Date.now()}-error`,
                 role: "assistant",
-                content: "Sorry, something went wrong while fetching the response.",
+                content: "Something went wrong while processing your request.",
                 timestamp: new Date().toISOString(),
             };
         }
@@ -177,7 +252,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const handleDownload = () => {
         console.log("CONTRACT GENERATED TRIGGERED THANK YOU METI");
         const link = document.createElement("a");
-        link.href = "http://127.0.0.1:8000/dow/qerimqerimAi";
+        let username = localStorage.getItem("name");
+        link.href = `http://127.0.0.1:8000/dow/${username}`;
         link.download = ""; // backend decides filename
         document.body.appendChild(link);
         link.click();

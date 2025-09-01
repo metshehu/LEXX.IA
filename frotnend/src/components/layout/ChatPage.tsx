@@ -10,6 +10,7 @@ interface IndexProps {
 }
 
 const ChatPage: React.FC<IndexProps> = ({ isSignInOpen, setIsSignInOpen }) => {
+    const [reviewFile, setReviewFile] = React.useState<string | null>(null);
     return (
         <>
             <Header isSignInOpen={isSignInOpen} setIsSignInOpen={setIsSignInOpen} />
@@ -18,11 +19,11 @@ const ChatPage: React.FC<IndexProps> = ({ isSignInOpen, setIsSignInOpen }) => {
                 <div className="flex h-full">
                     {/* Left side */}
                     <div className="bg-white w-[30%] ">
-                        <FileDetails />
+                        <FileDetails onReviewFile={setReviewFile} />
                     </div>
                     {/* Right side */}
                     <div className="bg-white flex-1 overflow-y-auto">
-                        <ChatInterface isFullScreen={false} />
+                        <ChatInterface isFullScreen={false} reviewFile={reviewFile} setreviewFile={setReviewFile} />
                     </div>
                 </div>
             </section>

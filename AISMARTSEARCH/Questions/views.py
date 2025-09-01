@@ -7,14 +7,17 @@ import shutil
 from itertools import chain
 from os import walk
 from pathlib import Path
+from urllib.parse import unquote
 
 import numpy as np
+import tiktoken
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.files.storage import FileSystemStorage
 from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
@@ -47,6 +50,16 @@ def clear_all_contract_fields():
     print(f"Cleared 'fields' for {count} ContractState records.")
 
     from django.http import JsonResponse
+
+
+def check_messages_length_approx(messages):
+    total_chars = sum(len(msg.get("content", "")) for msg in messages)
+    total_tokens_estimate = total_chars // 4  # rough estimate
+    return {
+        "num_messages": len(messages),
+        "total_chars": total_chars,
+        "estimated_tokens": total_tokens_estimate,
+    }
 
 
 def print_all_users(request):
@@ -93,11 +106,17 @@ def getalldirs(mypath):
 
 
 @csrf_exempt
-def fileuploadfront(request, user):
+def fileuploadfront(request, user, fileType):
+
     if request.method == "POST" and request.FILES.get("file"):
+
+        path = settings.STATIC_UPLOAD_DIR
+        if fileType == "akt":
+            path = settings.INTERNAL_ACT
+
         uploaded_file = request.FILES["file"]
 
-        user_dir = Path(settings.STATIC_UPLOAD_DIR) / user
+        user_dir = Path(path) / user
         user_dir.mkdir(
             parents=True, exist_ok=True
         )  # Create the user's directory if it doesn't exist
@@ -106,11 +125,14 @@ def fileuploadfront(request, user):
 
         if file_path.exists():
             return JsonResponse({"success": False, "message": "The file already exists."})
-        my_file = Path(f"{settings.STATIC_UPLOAD_DIR}/{user}/{uploaded_file.name}")
+        my_file = Path(f"{path}/{user}/{uploaded_file.name}")
         print(f"this is the file path {my_file}")
 
         if not my_file.is_file():
-            save_file(uploaded_file, user)
+            if fileType == "normal":
+                save_file(uploaded_file, user)
+            else:
+                save_file_akt(uploaded_file, user)
 
         with open(file_path, "wb+") as destination:
             for chunk in uploaded_file.chunks():
@@ -149,7 +171,20 @@ def signup(request):
 
     ContractState.objects.create(user=user)
 
+    UserValues.objects.create(
+        user=username,
+        splitter="CharacterTextSplitter",  # default
+        chunksize=500,
+        overlap=50,
+        temp=0.5,
+    )
+
+    """
+    TODO: make it add internal akt
+    """
     makedir(username)
+    makedir_internal_akt(username)
+    makedir_genert(username)
     return Response({"message": "User created successfully"}, status=201)
 
 
@@ -184,8 +219,32 @@ def recrate_csvs(user_path, user, parser):
         file_url = f"{settings.STATIC_UPLOAD_DIR}/{user}/{file_name}"
         fileChunks, fileEmbedings = parser.embedd(file_url)
         parser.SaveCsv(
-            settings.STATIC_UPLOAD_DIR + "/" + user, file_name[:-4], fileEmbedings, fileChunks
+            settings.STATIC_UPLOAD_DIR + "/" + user,
+            filename.rsplit(".", 1)[0],
+            fileEmbedings,
+            fileChunks,
         )
+
+
+def recrate_contract_template(request):
+
+    parser = Parsers(settings.OPENAI_KEY)
+    cr_path = os.path.join(settings.BASE_DIR, "hi")
+    pdf_files = allFileformat(cr_path, ".pdf")
+    word_files = allFileformat(cr_path, ".docx")
+
+    print("this is da path ", cr_path)
+    files = pdf_files + word_files
+    for file_name in files:
+        file_url = f"{cr_path}/{file_name}"
+        fileChunks, fileEmbedings = parser.embedd(file_url)
+        parser.SaveCsv(
+            settings.CONTRACT_TEMPALTES,
+            file_name[: file_name.rindex(".")],
+            fileEmbedings,
+            fileChunks,
+        )
+    return JsonResponse({"mes": "val"})
 
 
 def reembedfiles(user):
@@ -206,19 +265,22 @@ def addfiledata(dic, file_name, chunks, vectors, sim_score):
 
 
 def sort_data(files_data):
-    sorted_files = sorted(files_data.items(), key=lambda item: item[1]["score"], reverse=True)
+    sorted_files = sorted(files_data.items(),
+                          key=lambda item: item[1]["score"], reverse=True)
     top_10_files = sorted_files[:10]
-    top_10_chunks = list(chain.from_iterable(item[1]["chunks"] for item in top_10_files))
+    top_10_chunks = list(chain.from_iterable(
+        item[1]["chunks"] for item in top_10_files))
 
-    top_10_vectors = list(chain.from_iterable(item[1]["vectors"] for item in top_10_files))
+    top_10_vectors = list(chain.from_iterable(
+        item[1]["vectors"] for item in top_10_files))
 
     sorted_files_dict = collections.OrderedDict(top_10_files)
 
     return (top_10_chunks, top_10_vectors, sorted_files_dict)
 
 
-def system_file_parserT(querry_vector, user):
-    mypath = settings.STATIC_UPLOAD_DIR + "/" + user + "/"
+def system_file_parserT(querry_vector, user, base_path=settings.STATIC_UPLOAD_DIR):
+    mypath = base_path + "/" + user + "/"
     parser = Parsers(settings.OPENAI_KEY)  # ✅
 
     vectorlist = []
@@ -228,12 +290,14 @@ def system_file_parserT(querry_vector, user):
     for i in files:
         chunks, vectors = parser.ReadFromFile(mypath + i)
         # closest_index = parser.cosine_search(vectors, querry_vector)
-        top3, similariti_score = parser.cosine_search_top3(vectors, querry_vector, 30)
+        top3, similariti_score = parser.cosine_search_top3(
+            vectors, querry_vector, 40)
         for j in top3:
             chunkslist.append(chunks[j])
             vectorlist.append(vectors[j])
         if len(chunkslist) > 0:
-            addfiledata(files_data, i, chunkslist, vectorlist, similariti_score)
+            addfiledata(files_data, i, chunkslist,
+                        vectorlist, similariti_score)
 
             # print(files_data[i]['chunks'], files_data[i]['score'])
 
@@ -244,8 +308,38 @@ def system_file_parserT(querry_vector, user):
     return (top_10_chunks, top_10_vectors, sorted_files_dict)
 
 
-def system_file_parser(query_vectors, user):
-    mypath = settings.STATIC_UPLOAD_DIR + "/" + user + "/"
+def system_file_parser_law(querry_vector, user, base_path=settings.BASE_LAWS):
+    mypath = base_path + "/"
+    parser = Parsers(settings.OPENAI_KEY)  # ✅
+
+    vectorlist = []
+    chunkslist = []
+    files = allFileformat(mypath, ".csv")
+    files_data = {}
+    for i in files:
+        chunks, vectors = parser.ReadFromFile(mypath + i)
+        # closest_index = parser.cosine_search(vectors, querry_vector)
+        top3, similariti_score = parser.cosine_search_top3(
+            vectors, querry_vector, 30)
+        for j in top3:
+            chunkslist.append(chunks[j])
+            vectorlist.append(vectors[j])
+        if len(chunkslist) > 0:
+            addfiledata(files_data, i, chunkslist,
+                        vectorlist, similariti_score)
+
+            # print(files_data[i]['chunks'], files_data[i]['score'])
+
+        chunkslist = []
+        vectorlist = []
+
+    top_10_chunks, top_10_vectors, sorted_files_dict = sort_data(files_data)
+    return (top_10_chunks, top_10_vectors, sorted_files_dict)
+
+
+def system_file_parser(query_vectors, user, base_path=settings.STATIC_UPLOAD_DIR):
+
+    mypath = base_path + "/" + user + "/"
     parser = Parsers(settings.OPENAI_KEY)
 
     files = allFileformat(mypath, ".csv")
@@ -259,7 +353,8 @@ def system_file_parser(query_vectors, user):
 
         # Loop over each vector from legal context
         for law_vector in query_vectors:
-            top3, similarity_score = parser.cosine_search_top3(vectors, law_vector, 30)
+            top3, similarity_score = parser.cosine_search_top3(
+                vectors, law_vector, 30)
             for idx in top3:
                 chunkslist.append(chunks[idx])
                 vectorlist.append(vectors[idx])
@@ -280,6 +375,57 @@ def get_case_tamplates(query_vectors):
     print("this is case tempalte" * 19)
     print(files)
     print("this is case tempalte" * 19)
+
+    files_data = {}
+
+    # Determine expected vector length from query_vector
+    expected_len = len(query_vectors)
+
+    for file in files:
+        chunks, vectors = parser.ReadFromFile(mypath + file)
+
+        # Filter out vectors that do not match the expected length
+        filtered_chunks = []
+        filtered_vectors = []
+        for c, v in zip(chunks, vectors):
+            if isinstance(v, list) and len(v) == expected_len:
+                filtered_chunks.append(c)
+                filtered_vectors.append(v)
+            else:
+                print(
+                    f"Skipping vector with invalid length in file {file}: {v}")
+
+        if not filtered_vectors:
+            continue  # skip this file if no valid vectors
+
+        chunkslist = []
+        vectorlist = []
+        total_score = 0
+
+        # Compute top3 similarity with filtered vectors
+        top3, similarity_score = parser.cosine_search_top3(
+            filtered_vectors, query_vectors, 30)
+
+        for idx in top3:
+            chunkslist.append(filtered_chunks[idx])
+            vectorlist.append(filtered_vectors[idx])
+            total_score += similarity_score  # accumulate relevance
+
+        if chunkslist:
+            addfiledata(files_data, file, chunkslist, vectorlist, total_score)
+
+    top_10_chunks, top_10_vectors, sorted_files_dict = sort_data(files_data)
+    return top_10_chunks, top_10_vectors, sorted_files_dict
+
+
+def get_case_tamplates2(query_vectors):
+    mypath = settings.CONTRACT_TEMPALTES + "/"
+    parser = Parsers(settings.OPENAI_KEY)
+
+    files = allFileformat(mypath, ".csv")
+    print("this is case tempalte" * 19)
+    print(files)
+    print("this is case tempalte" * 19)
     files_data = {}
     for file in files:
         chunks, vectors = parser.ReadFromFile(mypath + file)
@@ -288,7 +434,8 @@ def get_case_tamplates(query_vectors):
         total_score = 0
 
         # Loop over each vector from legal context
-        top3, similarity_score = parser.cosine_search_top3(vectors, query_vectors, 30)
+        top3, similarity_score = parser.cosine_search_top3(
+            vectors, query_vectors, 30)
         for idx in top3:
             chunkslist.append(chunks[idx])
             vectorlist.append(vectors[idx])
@@ -315,7 +462,8 @@ def get_case_files(query_vectors):
 
         # Loop over each vector from legal context
         for law_vector in query_vectors:
-            top3, similarity_score = parser.cosine_search_top3(vectors, law_vector, 30)
+            top3, similarity_score = parser.cosine_search_top3(
+                vectors, law_vector, 30)
             for idx in top3:
                 chunkslist.append(chunks[idx])
                 vectorlist.append(vectors[idx])
@@ -328,13 +476,22 @@ def get_case_files(query_vectors):
     return top_10_chunks, top_10_vectors, sorted_files_dict
 
 
+"""
+YO METIII  sooo tomore with it beaing the 29 we will bve adding multiepr layers to this what do i mean is that the refrec types of it
+will be mutlitle insted of 1 specifike file like it curralty is to multiple ones sooo yes
+lets do it darlings
+"""
+
+
 def Get_aktin_i_brendshem_data(querry_vector):
     parser = Parsers(settings.OPENAI_KEY)  # ✅
     top_law_chunks, top_law_vector = parser.ReadFromFile(
-        settings.BASE_LAWS + "/" + "Draft Akti i Brendshëm - Kosove (7) (1).csv"
+        settings.BASE_LAWS + "/" +
+        "Draft Akti i Brendshëm - Kosove (7) (1).csv"
     )
 
-    top3, similariti_score = parser.cosine_search_top3(top_law_vector, querry_vector, 30)
+    top3, similariti_score = parser.cosine_search_top3(
+        top_law_vector, querry_vector, 30)
     chunkslist = []
     vectorlist = []
     for j in top3:
@@ -346,9 +503,11 @@ def Get_aktin_i_brendshem_data(querry_vector):
 
 def Get_law_data(querry_vector):
     parser = Parsers(settings.OPENAI_KEY)  # ✅
-    top_law_chunks, top_law_vector = parser.ReadFromFile(settings.BASE_LAWS + "/" + "LIGJI__NR.csv")
+    top_law_chunks, top_law_vector = parser.ReadFromFile(
+        settings.BASE_LAWS + "/" + "LIGJI__NR.csv")
 
-    top3, similariti_score = parser.cosine_search_top3(top_law_vector, querry_vector, 30)
+    top3, similariti_score = parser.cosine_search_top3(
+        top_law_vector, querry_vector, 30)
     chunkslist = []
     vectorlist = []
     for j in top3:
@@ -356,6 +515,144 @@ def Get_law_data(querry_vector):
         vectorlist.append(top_law_vector[j])
 
     return (chunkslist, vectorlist)
+
+
+def addReview_one(user, filename, messages):
+    """
+    data: list of tuples (file_name: str, content: str)
+    messages: list of dicts representing the existing messages list to which system entries will be appended
+
+    For each file and each chunk inside its content, add a system message describing the chunk.
+    """
+    parser = Parsers(settings.OPENAI_KEY)  # ✅
+
+    userpath = os.path.join(settings.STATIC_UPLOAD_DIR, user)
+    file = filename + ".csv"
+    data = {}
+    chunks, vectores = parser.ReadFromFile(os.path.join(userpath, file))
+    # Combine all chunks into a single string
+    long_text = "\n\n".join(chunks)
+    data[file] = long_text
+    for file_name, chunk in data.items():
+        new_entry = {
+            "role": "system",
+            "content": (
+                f"This is part of the document '{file_name}' relevant for legal review (Section {file}):\n{chunk}"
+            ),
+        }
+        messages.append(new_entry)
+
+    print(f"relted fiels ❗{file}")
+
+
+""" """
+
+
+def chunk_list(lst, n):
+    """Split list into chunks of size n (last batch may be smaller)."""
+    for i in range(0, len(lst), n):
+        yield lst[i: i + n]
+
+
+def review_in_batches(user, query, client):
+    print("LAW review started ⚠️")
+    userpath = os.path.join(settings.STATIC_UPLOAD_DIR, user)
+    files = allFileformat(userpath, ".csv")
+
+    print(files)
+
+    responses = []
+
+    # Split files into groups of 3
+    for idx, file_group in enumerate(chunk_list(files, 3), start=1):
+        print(f"➡️ Starting review for batch {idx}: {file_group}")
+
+        # fresh messages per group
+        messages2 = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a highly skilled legal assistant specializing in legal document review.\n\n"
+                    "Your task is to review all provided legal documents carefully and return a clear, structured legal analysis. Focus specifically on:\n\n"
+                    "- Identifying potential legal risks or liabilities\n"
+                    "- Noting missing clauses or provisions\n"
+                    "- Highlighting compliance issues or inconsistencies\n"
+                    "- Pointing out ambiguous or vague language\n"
+                    "- Detecting contradictions across documents\n\n"
+                    "If the user hasn’t asked for a specific focus, perform a general legal review. "
+                    "If a review scope is provided (e.g., employment law, data privacy), prioritize findings related to that.\n\n"
+                    "Your tone should be professional, neutral, and clear. Use bullet points, sections, or numbered lists where appropriate.\n\n"
+                    "⚠️ Do **not** summarize the documents unless explicitly asked.\n"
+                    "⚠️ Do **not** provide general legal theory — focus on what's present or missing in the provided text.\n\n"
+                    "If something is unclear, flag it. If everything looks good, say so explicitly.\n\n"
+                    "Example output structure:\n"
+                    "-------------------------\n"
+                    "Legal Review:\n\n"
+                    "1. Missing Clauses\n"
+                    "   - No termination clause detected.\n"
+                    "   - Lacks confidentiality agreement section.\n\n"
+                    "2. Inconsistencies\n"
+                    "   - Section 4 conflicts with Section 2 regarding payment terms.\n\n"
+                    "3. Risk Assessment\n"
+                    "   - Clause 8 creates a potential liability due to vague language.\n\n"
+                    "   - Specify if you can the Level of the risk Low/Medium/High\n"
+                    "4. General Observations\n"
+                    "   - Formatting is inconsistent.\n"
+                    "   - Passive voice used in critical obligations.\n\n"
+                    "End your review with a one-line summary of overall document quality "
+                    "(e.g., “The document is mostly complete but contains moderate risk areas.”)"
+                ),
+            },
+            {
+                "role": "system",
+                "content": (
+                    "The following guidance document outlines the standards and best practices for legal drafting and review in Kosovo. "
+                    "Refer to it strictly in all assessments:\n\n"
+                    f"{add_guidelines()}"
+                ),
+            },
+            {"role": "user", "content": f"Current Question: {query}"},
+        ]
+
+        # add just these 3 files
+        addReviewContext_batch(user, file_group, messages2)
+
+        # one GPT call per group
+        res = client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages2,
+            max_tokens=1500,
+            temperature=0.2,
+        )
+
+        response_message = res.choices[0].message
+        responses.append({"batch": idx, "files": file_group,
+                         "review": response_message.content})
+
+    return responses
+
+
+def addReviewContext_batch(user, file_group, messages):
+    """Add review context for a specific group of files."""
+    parser = Parsers(settings.OPENAI_KEY)
+    userpath = os.path.join(settings.STATIC_UPLOAD_DIR, user)
+
+    for file in file_group:
+        chunks, _ = parser.ReadFromFile(os.path.join(userpath, file))
+        long_text = "\n\n".join(chunks)
+
+        new_entry = {
+            "role": "system",
+            "content": (
+                f"This is part of the document '{file}' relevant for legal review:\n{long_text}"
+            ),
+        }
+        messages.append(new_entry)
+
+        print(f"related files ❗ {file_group}")
+
+
+""" """
 
 
 def addReviewContext(user, messages):
@@ -447,7 +744,8 @@ def addContext(data, message):
     for file_name, content in data.items():
         # print(file_name + '-' * 20)
 
-        chunks = "\n".join([f"```text\n{chunk}\n```" for chunk in content["chunks"]])
+        chunks = "\n".join(
+            [f"```text\n{chunk}\n```" for chunk in content["chunks"]])
 
         newdic = {
             "role": "system",
@@ -631,10 +929,12 @@ def context_aware_responses(query, law_data, ak_data, case_data, data, case_info
     # addHistory(Question_history, Answer_history, messages)
 
     addLawContext(law_data, messages)
-    addCaseFileContext(case_data, messages)
+    # addCaseFileContext(case_data, messages)
     addInternalAkteContext(ak_data, messages)
 
     addContext(data, messages)
+
+    print("length ->", check_messages_length_approx(messages))
 
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -672,16 +972,20 @@ def context_aware_responses(query, law_data, ak_data, case_data, data, case_info
                 allstring = []
 
                 for i in files:
-                    contract_state, _ = ContractState.objects.get_or_create(user=getuser(user))
+                    contract_state, _ = ContractState.objects.get_or_create(
+                        user=getuser(user))
 
                     # serialize the dict to a JSON string
-                    safe_data = convert_ndarray_to_list(files[i])  # convert all ndarrays to lists
+                    safe_data = convert_ndarray_to_list(
+                        files[i])  # convert all ndarrays to lists
 
-                    contract_state.file = json.dumps(safe_data, ensure_ascii=False)
+                    contract_state.file = json.dumps(
+                        safe_data, ensure_ascii=False)
                     contract_state.save()
 
                     print("<---3, ", i)
-                    chu, vec = parser.ReadFromFile(settings.CONTRACT_TEMPALTES + "/" + i)
+                    chu, vec = parser.ReadFromFile(
+                        settings.CONTRACT_TEMPALTES + "/" + i)
                     allstring.append((i, " ".join(chu)))
                     break
 
@@ -695,93 +999,104 @@ def context_aware_responses(query, law_data, ak_data, case_data, data, case_info
                 )
 
                 response_message = res.choices[0].message
-                required_fields = res.choices[0].message.content.strip().split(",")
-                required_fields = [field.strip() for field in required_fields if field.strip()]
+                required_fields = res.choices[0].message.content.strip().split(
+                    ",")
+                required_fields = [field.strip()
+                                   for field in required_fields if field.strip()]
 
                 # if len(required_fields) > 0:
                 #    settings.USER_INFO = True
                 #    settings.FIELDS = "\n".join(f"- {field}" for field in required_fields)
                 if len(required_fields) > 0:
-                    contract_state, _ = ContractState.objects.get_or_create(user=getuser(user))
+                    contract_state, _ = ContractState.objects.get_or_create(
+                        user=getuser(user))
                     contract_state.user_info = True
-                    contract_state.fields = "\n".join(f"- {field}" for field in required_fields)
+                    contract_state.fields = "\n".join(
+                        f"- {field}" for field in required_fields)
                     contract_state.save()
 
                 print(required_fields)
 
                 print("L)@@@" * 2)
                 print(response_message, " ", response_message.content)
-                return response_message.content
-                return {"action": "generate_contract", "reason": reason, "triggered": True}
+                return (response_message.content, "Contract_generted")
+                # return {"action": "generate_contract", "reason": reason, "triggered": True}
 
             if tool_call.function.name == "trigger_legal_review":
-                messages2 = [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a highly skilled legal assistant specializing in legal document review.\n\n"
-                            "Your task is to review all provided legal documents carefully and return a clear, structured legal analysis. Focus specifically on:\n\n"
-                            "- Identifying potential legal risks or liabilities\n"
-                            "- Noting missing clauses or provisions\n"
-                            "- Highlighting compliance issues or inconsistencies\n"
-                            "- Pointing out ambiguous or vague language\n"
-                            "- Detecting contradictions across documents\n\n"
-                            "If the user hasn’t asked for a specific focus, perform a general legal review. "
-                            "If a review scope is provided (e.g., employment law, data privacy), prioritize findings related to that.\n\n"
-                            "Your tone should be professional, neutral, and clear. Use bullet points, sections, or numbered lists where appropriate.\n\n"
-                            "⚠️ Do **not** summarize the documents unless explicitly asked.\n"
-                            "⚠️ Do **not** provide general legal theory — focus on what's present or missing in the provided text.\n\n"
-                            "If something is unclear, flag it. If everything looks good, say so explicitly.\n\n"
-                            "You do not need to ask follow-up questions unless the prompt requests clarification.\n\n"
-                            "Example output structure:\n"
-                            "-------------------------\n"
-                            "Legal Review:\n\n"
-                            "1. Missing Clauses\n"
-                            "   - No termination clause detected.\n"
-                            "   - Lacks confidentiality agreement section.\n\n"
-                            "   - if somthing can be change specifke it and the valid change base on it \n"
-                            "2. Inconsistencies\n"
-                            "   - Section 4 conflicts with Section 2 regarding payment terms.\n\n"
-                            "3. Risk Assessment\n"
-                            "   - Clause 8 creates a potential liability due to vague language.\n\n"
-                            "   - specife if you can the Level of the risk Low/Medium/High"
-                            "4. General Observations\n"
-                            "   - Formatting is inconsistent.\n"
-                            "   - Passive voice used in critical obligations.\n\n"
-                            "End your review with a one-line summary of overall document quality "
-                            "(e.g., “The document is mostly complete but contains moderate risk areas.”)"
-                        ),
-                    },
-                    {"role": "user", "content": f"Current Question: {query}"},
-                ]
-                messages2.insert(
-                    1,
-                    {
-                        "role": "system",
-                        "content": (
-                            "The following guidance document outlines the standards and best practices for legal drafting and review in Kosovo. "
-                            "Refer to it strictly in all assessments:\n\n"
-                            # <- load this from the PDF or pre-parsed text
-                            f"{add_guidelines()}"
-                        ),
-                    },
-                )
 
-                print("LAW reveiw stared ⚠️")
-                addReviewContext(user, messages2)
-                res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=messages2,
-                    max_tokens=1500,  # test on the higer end to the lowest 50-600
-                    temperature=0.2,  # Strict and deterministic responses
-                )
+                response_message = review_in_batches(user, query, client)
+                return (response_message, "Review")
+                # if tool_call.function.name == "trigger_legal_review":
+                # messages2 = [
+                # {
+                # "role": "system",
+                # "content": (
+                # "You are a highly skilled legal assistant specializing in legal document review.\n\n"
+                # "Your task is to review all provided legal documents carefully and return a clear, structured legal analysis. Focus specifically on:\n\n"
+                # "- Identifying potential legal risks or liabilities\n"
+                # "- Noting missing clauses or provisions\n"
+                # "- Highlighting compliance issues or inconsistencies\n"
+                # "- Pointing out ambiguous or vague language\n"
+                # "- Detecting contradictions across documents\n\n"
+                # "If the user hasn’t asked for a specific focus, perform a general legal review. "
+                # "If a review scope is provided (e.g., employment law, data privacy), prioritize findings related to that.\n\n"
+                # "Your tone should be professional, neutral, and clear. Use bullet points, sections, or numbered lists where appropriate.\n\n"
+                # "⚠️ Do **not** summarize the documents unless explicitly asked.\n"
+                # "⚠️ Do **not** provide general legal theory — focus on what's present or missing in the provided text.\n\n"
+                # "If something is unclear, flag it. If everything looks good, say so explicitly.\n\n"
+                # "You do not need to ask follow-up questions unless the prompt requests clarification.\n\n"
+                # "Example output structure:\n"
+                # "-------------------------\n"
+                # "Legal Review:\n\n"
+                # "1. Missing Clauses\n"
+                # "   - No termination clause detected.\n"
+                # "   - Lacks confidentiality agreement section.\n\n"
+                # "   - if somthing can be change specifke it and the valid change base on it \n"
+                # "2. Inconsistencies\n"
+                # "   - Section 4 conflicts with Section 2 regarding payment terms.\n\n"
+                # "3. Risk Assessment\n"
+                # "   - Clause 8 creates a potential liability due to vague language.\n\n"
+                # "   - specife if you can the Level of the risk Low/Medium/High"
+                # "4. General Observations\n"
+                # "   - Formatting is inconsistent.\n"
+                # "   - Passive voice used in critical obligations.\n\n"
+                # "End your review with a one-line summary of overall document quality "
+            # "(e.g., “The document is mostly complete but contains moderate risk areas.”)"
+            # ),
+            # },
+            # {"role": "user", "content": f"Current Question: {query}"},
+            # ]
+            # messages2.insert(
+            # 1,
+            # {
+            # "role": "system",
+            # "content": (
+            # "The following guidance document outlines the standards and best practices for legal drafting and review in Kosovo. "
+            # "Refer to it strictly in all assessments:\n\n"
+            # <- load this from the PDF or pre-parsed text
+            # f"{add_guidelines()}"
+            # ),
+            # },
+            # )
 
-                response_message = res.choices[0].message
-                return response_message.content
-                return "yayyy"
+            # print("LAW reveiw stared ⚠️")
+            # userpath = os.path.join(settings.STATIC_UPLOAD_DIR, user)
+            # files = allFileformat(userpath, ".csv")
 
+            # print(files)
+
+            # addReviewContext(user, messages2)
+            # res = client.chat.completions.create(
+            # model="gpt-4o",
+            # messages=messages2,
+            # max_tokens=1500,  # test on the higer end to the lowest 50-600
+            # temperature=0.2,  # Strict and deterministic responses
+            # )
+
+            # response_message = res.choices[0].message
+            # return (response_message.content, "Review")
     # If no function triggered, continue normally
-    return response_message.content
+    return (response_message.content, "Normal")
 
 
 def unpack_history(history):
@@ -805,13 +1120,48 @@ def delet_path(user):
         print(f"Directory '{path}' does not exist.")
 
 
+@csrf_exempt
+@api_view(["DELETE"])
+# @permission_classes([AllowAny])
+def delet_file(request, user, filename, fileType):
+    base_path = settings.STATIC_UPLOAD_DIR
+    if fileType == "akt":
+        base_path = settings.INTERNAL_ACT
+
+    file_path = os.path.join(base_path, user, filename)
+    csv_path = os.path.join(
+        base_path, user, filename.rsplit(".", 1)[0] + ".csv")
+
+    if os.path.exists(file_path) and os.path.exists(csv_path):
+        os.remove(file_path)
+        os.remove(csv_path)
+        print(f"File '{file_path}' has been deleted.")
+        return JsonResponse({"message": "File deleted successfully"})
+    else:
+        return JsonResponse({"error": "File not found"}, status=404)
+
+
 def delet_photo(user):
-    user_photos_path = os.path.join(settings.BASE_DIR, "static/userphotos", f"{user}.png")
+    user_photos_path = os.path.join(
+        settings.BASE_DIR, "static/userphotos", f"{user}.png")
     if os.path.exists(user_photos_path):
         os.remove(user_photos_path)
         print(f"File '{user_photos_path}' has been deleted.")
     else:
         print(f"File '{user_photos_path}' does not exist.")
+
+
+def get_files(request, user, fileType):
+    base_path = settings.STATIC_UPLOAD_DIR
+    if fileType == "akt":
+        base_path = settings.INTERNAL_ACT
+
+    mypath = base_path + "/" + user
+    pdf_files = allFileformat(mypath, ".pdf")
+    docx_files = allFileformat(mypath, ".docx")
+
+    all_files = pdf_files + docx_files
+    return JsonResponse({"users": all_files})
 
 
 def delet_user(request, user):
@@ -869,10 +1219,12 @@ def manage_users(request):
 def askingT(user, query):
     parser = Parsers(settings.OPENAI_KEY)
     query_vector = parser.embedquerry(query)
+
     chunks, vectors, contract_info = system_file_parser(query_vector, user)
     history = user_history(user)
     pastQuestion, pastAnswe = unpack_history(history)
-    res = context_aware_responses(query, pastQuestion, pastAnswe, contract_info, user)
+    res = context_aware_responses(
+        query, pastQuestion, pastAnswe, contract_info, user)
     return (res, contract_info)
 
 
@@ -898,20 +1250,37 @@ def get_all_base_laws():
 def asking(user, query):
     parser = Parsers(settings.OPENAI_KEY)
     query_vector = parser.embedquerry(query)
-    top_law_chunks, top_law_vector = Get_law_data(query_vector)
-    top_ak_chunks, top_ak_chnks = Get_aktin_i_brendshem_data(query_vector)
+    top_law_chunks, top_law_vector, sorted_law_files = system_file_parser_law(
+        query_vector, user
+    )  # Get_law_data(query_vector)
+    top_law_chunks2, top_law_vector2 = Get_law_data(query_vector)
+    top_ak_chunks, top_ak_chnks, sorted_akt_files = system_file_parserT(
+        query_vector, user, settings.INTERNAL_ACT
+    )  # Get_aktin_i_brendshem_data(query_vector)
 
-    print("---" * 10)
-    print(top_ak_chunks)
-    print("---" * 10)
     chunks, vectors, contract_info = system_file_parser(top_law_vector, user)
 
-    top_case_chunks, top_case_vectors, case_info = get_case_files(top_law_vector)
+    top_case_chunks, top_case_vectors, case_info = get_case_files(
+        top_law_vector)
 
-    res = context_aware_responses(
-        query, top_law_chunks, top_ak_chunks, top_case_chunks, contract_info, case_info, user
+    for i in contract_info:
+        print(i)
+        print(len(contract_info[i]["chunks"]))
+        print(len(contract_info[i]["vectors"]))
+    print("-" * 10)
+
+    print(len(contract_info), "this is length 2<->")
+
+    res, res_type = context_aware_responses(
+        query=query,
+        law_data=top_law_chunks,
+        ak_data=top_ak_chunks,
+        case_data=top_case_chunks,
+        data=contract_info,
+        case_info=case_info,
+        user=user,
     )
-    return (res, contract_info)
+    return (res, contract_info, res_type)
 
 
 def user_history(user):
@@ -962,7 +1331,8 @@ def chat_leagl(request, user):
     files = []
     combined = []
     responds = []
-    context = {"user": user, "answer": responds, "files": files, "combined": combined}
+    context = {"user": user, "answer": responds,
+               "files": files, "combined": combined}
 
     return render(request, "chat.html", context)
 
@@ -1001,7 +1371,8 @@ def get_context_data(text, user):
 
 def genert_proerpt_contrext2(text):
 
-    chunks = "\n".join([f"\n{chunk}\n```" for chunk in settings.FILE["chunks"]])
+    chunks = "\n".join(
+        [f"\n{chunk}\n```" for chunk in settings.FILE["chunks"]])
     system_prompt = f"""
     You are a legal assistant that drafts professional contracts.
     Below you have a contract template (or parts of it):
@@ -1049,6 +1420,8 @@ def json_to_docx(data: dict, filename="legal.docx", subfolder="my_docs"):
     os.makedirs(output_dir, exist_ok=True)
     full_path = os.path.join(output_dir, filename)
 
+    print(settings.GENERATED_FILES)
+    print(output_dir, " <=> ", full_path)
     print("json_to_docx -> {", data, "}")
     for section in data:
         if section["type"] == "heading":
@@ -1189,11 +1562,13 @@ def write_string_to_pdf(content: str, filename: str = "demo.pdf", subfolder: str
     story = []
 
     # Custom styles
-    heading_style = ParagraphStyle("Heading", parent=styles["Heading2"], spaceAfter=10)
+    heading_style = ParagraphStyle(
+        "Heading", parent=styles["Heading2"], spaceAfter=10)
     normal_style = styles["Normal"]
     bullet_style = styles["Bullet"]
 
-    lines = [line.strip() for line in content.splitlines() if line.strip()]  # remove empty lines
+    lines = [line.strip() for line in content.splitlines()
+             if line.strip()]  # remove empty lines
 
     for line in lines:
         if line.startswith("- "):
@@ -1216,7 +1591,8 @@ def write_string_to_docx(content: str, filename: str = "demo.docx", subfolder: s
     full_path = os.path.join(output_dir, filename)
 
     document = Document()
-    lines = [line.strip() for line in content.splitlines() if line.strip()]  # remove empty lines
+    lines = [line.strip() for line in content.splitlines()
+             if line.strip()]  # remove empty lines
 
     for line in lines:
         if line.startswith("- "):
@@ -1230,6 +1606,79 @@ def write_string_to_docx(content: str, filename: str = "demo.docx", subfolder: s
     document.save(full_path)
     print(f"Saved to {full_path}")
     return full_path
+
+
+def review_one_file(request, user, fileName):
+    print("hello123")
+
+    client = OpenAI(api_key=settings.OPENAI_KEY)
+    messages2 = [
+        {
+            "role": "system",
+            "content": (
+                "You are a highly skilled legal assistant specializing in legal document review.\n\n"
+                "Your task is to review all provided legal documents carefully and return a clear, structured legal analysis. Focus specifically on:\n\n"
+                "- Identifying potential legal risks or liabilities\n"
+                "- Noting missing clauses or provisions\n"
+                "- Highlighting compliance issues or inconsistencies\n"
+                "- Pointing out ambiguous or vague language\n"
+                "- Detecting contradictions across documents\n\n"
+                "If the user hasn’t asked for a specific focus, perform a general legal review. "
+                "If a review scope is provided (e.g., employment law, data privacy), prioritize findings related to that.\n\n"
+                "Your tone should be professional, neutral, and clear. Use bullet points, sections, or numbered lists where appropriate.\n\n"
+                "⚠️ Do **not** summarize the documents unless explicitly asked.\n"
+                "⚠️ Do **not** provide general legal theory — focus on what's present or missing in the provided text.\n\n"
+                "If something is unclear, flag it. If everything looks good, say so explicitly.\n\n"
+                "You do not need to ask follow-up questions unless the prompt requests clarification.\n\n"
+                "Example output structure:\n"
+                "-------------------------\n"
+                "Legal Review:\n\n"
+                "1. Missing Clauses\n"
+                "   - No termination clause detected.\n"
+                "   - Lacks confidentiality agreement section.\n\n"
+                "   - if somthing can be change specifke it and the valid change base on it \n"
+                "2. Inconsistencies\n"
+                "   - Section 4 conflicts with Section 2 regarding payment terms.\n\n"
+                "3. Risk Assessment\n"
+                "   - Clause 8 creates a potential liability due to vague language.\n\n"
+                "   - specife if you can the Level of the risk Low/Medium/High"
+                "4. General Observations\n"
+                "   - Formatting is inconsistent.\n"
+                "   - Passive voice used in critical obligations.\n\n"
+                "End your review with a one-line summary of overall document quality "
+                "(e.g., “The document is mostly complete but contains moderate risk areas.”)"
+            ),
+        },
+    ]
+    messages2.insert(
+        1,
+        {
+            "role": "system",
+            "content": (
+                "The following guidance document outlines the standards and best practices for legal drafting and review in Kosovo. "
+                "Refer to it strictly in all assessments:\n\n"
+                # <- load this from the PDF or pre-parsed text
+                f"{add_guidelines()}"
+            ),
+        },
+    )
+
+    print("LAW reveiw stared ⚠️ ->", user, "->", fileName)
+
+    fileName = fileName[: fileName.rindex(".")]
+    print(fileName)
+    # addReviewContext(user, messages2)
+    addReview_one(user, fileName, messages2)
+    res = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages2,
+        max_tokens=1500,  # test on the higer end to the lowest 50-600
+        temperature=0.2,  # Strict and deterministic responses
+    )
+
+    response_message = res.choices[0].message
+
+    return JsonResponse({"result": response_message.content})
 
 
 def write_string_to_docx2(content: str, filename: str = "demo.docx", subfolder: str = "my_docs"):
@@ -1249,6 +1698,9 @@ def write_string_to_docx2(content: str, filename: str = "demo.docx", subfolder: 
 
 
 def download_file(request, user):
+    print(settings.GENERATED_FILES)
+    print(settings.STATIC_UPLOAD_DIR)
+    print(settings.INTERNAL_ACT)
     file_path = os.path.join(settings.GENERATED_FILES, user, "legal.docx")
     return FileResponse(open(file_path, "rb"), as_attachment=True, filename="legal.docx")
 
@@ -1256,9 +1708,88 @@ def download_file(request, user):
 # 🔥 Example usage:
 
 
-def chat_front(request, user, query):
+@csrf_exempt  # remove if you handle CSRF with tokens
+def chat_front(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user = data.get("user")
+        text = data.get("query")  # question from POST body
+        text = unquote(text)
+
+        print("TEXTTEXT")
+        print(text)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if not user or not text:
+        return JsonResponse({"error": "Missing 'user' or 'query' in request body"}, status=400)
+
     responds = ""
-    genered=False
+    genered = False
+    review = False
+    mypath = settings.STATIC_UPLOAD_DIR + "/" + user
+
+    state = ContractState.objects.filter(user=getuser(user)).first()
+
+    if not state or not state.user_info:
+        responds, all_data, responds_type = asking(user, text)
+        print("IMPORTANT ->", responds)
+    else:
+        user_contract_data = get_context_data(text, user)
+        print("final boss !!!!" * 100)
+        print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
+
+        responds, all_data, responds_type = asking(user, text)
+        if responds_type != "Review":
+            responds = genert_proerpt_contrext(user_contract_data, user)
+
+            json_respons = generate_legal_doc_json(responds, user)
+            savedocx = json_to_docx(
+                json_respons, filename="legal.docx", subfolder=user)
+            print(savedocx, "IS THIS THE RELEVT PATH ??")
+            genered = True
+
+        state.fields = ""
+        state.file = ""
+        state.user_info = False
+        state.save()
+
+    if responds_type == "Review":
+        text == "\n-----\n".join(
+            f"Batch {batch['batch']}:\nFiles: {', '.join(batch['files'])}\n\n{batch['review']}"
+            for batch in data["answer"]
+        )
+    chat_message = History(
+        sender=user,
+        question=text,
+        respons=responds,
+    )
+    chat_message.save()
+    saveHitoryChunsk(chat_message, all_data)
+
+    pdf_files = allFileformat(mypath, ".pdf")
+    word_files = allFileformat(mypath, ".docx")
+    files = pdf_files + word_files
+
+    combined = [{"question": q, "answer": a} for q, a in user_history(user)]
+
+    if responds_type == "Review":
+
+        print("2<=>2 " * 10)
+        print(len(responds))
+        print("2<=>2 " * 10)
+    return JsonResponse(
+        {"answer": responds, "history": combined,
+            "Generted": genered, "type": responds_type}
+    )
+
+
+def chat_front2(request, user, query):
+    responds = ""
+    genered = False
     mypath = settings.STATIC_UPLOAD_DIR + "/" + user
     text = query  # question passed via URL path
     if text:
@@ -1266,18 +1797,19 @@ def chat_front(request, user, query):
 
         if not state or not state.user_info:
             responds, all_data = asking(user, text)
-
         else:
             user_contract_data = get_context_data(text, user)
             print("final boss !!!!" * 100)
-            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
+            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ",
+                  user_contract_data)
 
             responds, all_data = asking(user, text)
             responds = genert_proerpt_contrext(user_contract_data, user)
 
             json_respons = generate_legal_doc_json(responds, user)
 
-            savedocx = json_to_docx(json_respons, filename="legal.docx", subfolder=user)
+            savedocx = json_to_docx(
+                json_respons, filename="legal.docx", subfolder=user)
             print(savedocx, "IS THIS THE RELEVT PATH ??")
 
             # save = write_string_to_docx(responds)
@@ -1287,7 +1819,7 @@ def chat_front(request, user, query):
             state.file = ""  # if you also want to clear the file content
             state.user_info = False
             state.save()
-            genered=True
+            genered = True
 
         chat_message = History(
             sender=user,
@@ -1301,7 +1833,8 @@ def chat_front(request, user, query):
         word_files = allFileformat(mypath, ".docx")
         files = pdf_files + word_files
 
-        combined = [{"question": q, "answer": a} for q, a in user_history(user)]
+        combined = [{"question": q, "answer": a}
+                    for q, a in user_history(user)]
 
     return JsonResponse({"answer": responds, "history": combined, "Generted": genered})
 
@@ -1326,7 +1859,8 @@ def chat(request, user):
             state2 = ContractState.objects.filter(user=getuser(user)).first()
             user_contract_data = get_context_data(text, user)
             print("final boss !!!!" * 100)
-            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
+            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ",
+                  user_contract_data)
             # responds, all_data = genert_template(user, user_contract_data):
 
             responds, all_data = asking(user, text)
@@ -1355,7 +1889,8 @@ def chat(request, user):
     files = pdf_files + word_files
 
     combined = user_history(user)
-    context = {"user": user, "answer": responds, "files": files, "combined": combined}
+    context = {"user": user, "answer": responds,
+               "files": files, "combined": combined}
     return render(request, "chat.html", context)
 
 
@@ -1391,9 +1926,32 @@ def home(request):
     return render(request, "home.html", context)
 
 
+def makedir_genert(user_name):
+    # print(user_name)
+    target_dir = os.path.join(settings.GENERATED_FILES, user_name)
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+        print(f"Directory {user_name} created at {target_dir}")
+    else:
+        print(f"Directory {user_name} already exists at {target_dir}")
+        os.makedirs(target_dir, exist_ok=True)
+
+
+def makedir_internal_akt(user_name):
+    # print(user_name)
+    target_dir = os.path.join(settings.INTERNAL_ACT, user_name)
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+        print(f"Directory {user_name} created at {target_dir}")
+    else:
+        print(f"Directory {user_name} already exists at {target_dir}")
+        os.makedirs(target_dir, exist_ok=True)
+
+
 def makedir(user_name):
     # print(user_name)
-    target_dir = os.path.join(settings.BASE_DIR, "static", "uploads", user_name)
+    target_dir = os.path.join(
+        settings.BASE_DIR, "static", "uploads", user_name)
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
         print(f"Directory {user_name} created at {target_dir}")
@@ -1431,6 +1989,28 @@ def makedirForm(request):
     return render(request, "upload_file.html", {"form": form})
 
 
+def save_file_akt(uploaded_file, user):
+    fs = FileSystemStorage(location=settings.INTERNAL_ACT + f"/{user}")
+    fs.save(uploaded_file.name, uploaded_file)
+
+    file_url = f"{settings.INTERNAL_ACT}/{user}/{uploaded_file.name}"
+    parser = Parsers(settings.OPENAI_KEY)
+    user_value = UserValues.objects.filter(user=user).first()
+    spliter = user_value.splitter
+    chunksize = user_value.chunksize
+    overlap = user_value.overlap
+    # print(f'info about user {user} chunksize {
+    #      chunksize} overlap {overlap} spliter {spliter}')
+    parser.SetSpliter(spliter=spliter, chuncksize=chunksize, overlap=overlap)
+
+    fileChunks, fileEmbedings = parser.embedd(file_url)
+
+    parser.SaveCsv(
+        settings.INTERNAL_ACT + "/" + user, uploaded_file.name, fileEmbedings, fileChunks
+    )
+    return fileEmbedings
+
+
 def save_file(uploaded_file, user):
     fs = FileSystemStorage(location=settings.STATIC_UPLOAD_DIR + f"/{user}")
     fs.save(uploaded_file.name, uploaded_file)
@@ -1448,7 +2028,8 @@ def save_file(uploaded_file, user):
     fileChunks, fileEmbedings = parser.embedd(file_url)
 
     parser.SaveCsv(
-        settings.STATIC_UPLOAD_DIR + "/" + user, uploaded_file.name, fileEmbedings, fileChunks
+        settings.STATIC_UPLOAD_DIR + "/" +
+        user, uploaded_file.name, fileEmbedings, fileChunks
     )
     return fileEmbedings
 
@@ -1457,7 +2038,8 @@ def save_file(uploaded_file, user):
 def fileupload(request, user):
     if request.method == "POST" and request.FILES["file"]:
         uploaded_file = request.FILES["file"]
-        my_file = Path(f"{settings.STATIC_UPLOAD_DIR}/{user}/{uploaded_file.name}")
+        my_file = Path(
+            f"{settings.STATIC_UPLOAD_DIR}/{user}/{uploaded_file.name}")
         if not my_file.is_file():
             save_file(uploaded_file, user)
             return redirect(f"/chat/{user}/")

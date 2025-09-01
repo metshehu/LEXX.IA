@@ -77,9 +77,9 @@ const Features = () => {
           className="flex-1 flex justify-center animate-slide-up"
           style={{ animationDelay: "0.6s" }}
         >
-          <div className="w-[350px] h-[350px] overflow-hidden rounded-[50%_50%_50%_50%/60%_40%_60%_40%] shadow-lg">
+          <div className="w-[350px] h-[400px] ">
             <img
-              src="/lawwoman.jpg"
+              src="/final.png"
               alt="AI Recruitment Assistant"
               className="w-full h-full object-cover"
             />

@@ -20,7 +20,11 @@ STATIC_UPLOAD_DIR = os.path.join(BASE_DIR, "static/uploads")
 BASE_LAWS = os.path.join(BASE_DIR, "static/BaseLaws")
 CONTRACT_TEMPALTES = os.path.join(BASE_DIR, "static/ContractTemplates")
 
-GENERATED_FILES= os.path.join(BASE_DIR, "static/Generated_File")
+
+
+GENERATED_FILES = os.path.join(BASE_DIR, "static/Generated_File")
+
+INTERNAL_ACT = os.path.join(BASE_DIR, "static/Internal_Act")
 
 USER_INFO = False
 LEAGLEREVIEW = os.path.join(BASE_DIR, "static/LeaglReview")
@@ -36,7 +40,8 @@ SECRET_KEY = "django-insecure-12)qzr@+vd$+cn_f20!yud2&)f^ghpau9n%87tar0s1lletp6-
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY")  # Define media settings
 print(OPENAI_KEY)
 if not OPENAI_KEY:
-    raise ValueError("OpenAI API key is not set. Please add it to your environment variables.")
+    raise ValueError(
+        "OpenAI API key is not set. Please add it to your environment variables.")
 
 FILE = {}
 MEDIA_URL = "/media/"  # URL for accessing uploaded files
@@ -81,7 +86,6 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",  # your frontend dev server
 ]
-
 
 
 ROOT_URLCONF = "MetiSearch.urls"

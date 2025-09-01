@@ -6,19 +6,98 @@ const FeatureGrid = () => {
 
       <div className="flex flex-col md:flex-row items-center md:items-center justify-between max-w-7xl mx-auto px-6 md:px-12 gap-16 w-full">
         {/* Left Image with circular background */}
+<div className="relative flex justify-center items-start animate-slide-up" style={{ animationDelay: "0.6s" }}>
+  {/* Container for the logo */}
 
-        <div
-          className=" flex justify-center animate-slide-up"
-          style={{ animationDelay: "0.6s" }}
-        >
-          <div className="w-[350px] h-[350px] overflow-hidden rounded-[50%_50%_50%_50%/60%_40%_60%_40%] shadow-lg">
-            <img
-              src="/lexia-logo-white.png"
-              alt="AI Recruitment Assistant"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
+
+
+
+
+
+
+<div className="relative w-[320px] h-[320px]">
+  {/* Lexia logo */}
+  <img
+    src="/lexia-logo-white-with-text.png"
+    alt="AI Recruitment Assistant"
+    className="w-full h-full object-cover rounded-full"
+  />
+
+  {/* Floating documents */}
+  {/* Left side */}
+  <div className="absolute top-[0px] left-[30%] w-[70px] h-[70px] opacity-70 transform -rotate-12">
+    <img src="/dochope.png" alt="Document" className="w-full h-full object-cover" />
+  </div>
+  <div className="absolute top-[50px] left-[20%] w-[60px] h-[60px] opacity-60 transform rotate-6">
+    <img src="/dochope.png" alt="Document" className="w-full h-full object-cover" />
+  </div>
+
+  {/* Right side */}
+  <div className="absolute top-[0px] right-[20%] w-[70px] h-[70px] opacity-70 transform rotate-12">
+    <img src="/dochope.png" alt="Document" className="w-full h-full object-cover" />
+  </div>
+  <div className="absolute top-[45px] right-[10%] w-[60px] h-[60px] opacity-60 transform -rotate-6">
+    <img src="/dochope.png" alt="Document" className="w-full h-full object-cover" />
+  </div>
+
+  {/* Center / flying upward */}
+  <div className="absolute top-[-30px] left-1/2 -translate-x-1/2 w-[65px] h-[65px] opacity-80 transform rotate-[20deg]">
+    <img src="/dochope.png" alt="Document" className="w-full h-full object-cover" />
+  </div>
+</div>
+
+
+                    <div className="absolute top-[5%] left-[-30%] w-[100px] h-[200px] opacity-60 rotate-[-15deg]">
+
+  {/* Document */}
+  <img
+    src="/lens.png"
+    alt="Lens"
+    className="absolute bottom-[15%] left-[60%] w-[50px] h-[50px]  opacity-60"
+
+  />
+
+  <img
+    src="/File.png"
+    alt="Document"
+    className="w-full h-full object-cover"
+  />
+
+  {/* Lens in bottom-right */}
+</div>
+                    <div className="absolute top-[5%] right-[-15%] w-[100px] h-[200px] opacity-60 rotate-[15deg]">
+
+  {/* Document */}
+  <img
+    src="/dochope.png"
+    alt="Lens"
+    className="absolute bottom-[8%] left-[60%] w-[100px] h-[100px]  opacity-60 rotate-[30deg]"
+
+  />
+  <img
+    src="/dochope.png"
+    alt="Lens"
+    className="absolute bottom-[11%] left-[60%] w-[100px] h-[100px]  opacity-80 rotate-[15deg]"
+
+  />
+
+
+  <img
+    src="/dochope.png"
+    alt="Lens"
+    className="absolute bottom-[15%] left-[50%] w-[100px] h-[100px]  rotate-[-15deg]"
+
+  />
+
+  {/* Lens in bottom-right */}
+</div>
+
+
+
+ 
+
+</div>
+
 
         {/* Right Text */}
         <div className="text-left">
