@@ -13,6 +13,7 @@ urlpatterns = [
     path("delete-user/<str:user>", views.delet_user, name="delet-user"),
     path("get-chunks/<str:user>/<str:question>", views.getchunksforQuestin, name="chunks"),
     path("api/questions/", views.chat_front, name="questions"),
+    path("api/questions2/", views.chat_front3, name="questions3"),
     path("history/<str:user>", views.user_history_json, name="user_history"),
     #path("get-cv/<str:user>/", views.get_cv, name="cv"), # get files
     path("api/signup/", views.signup, name="signup"),

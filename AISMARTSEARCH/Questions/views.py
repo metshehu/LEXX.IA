@@ -1675,6 +1675,22 @@ def download_file(request, user):
 
 # 🔥 Example usage:
 
+@csrf_exempt
+def chat_front3(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user = data.get("user")
+        text = data.get("query")
+
+        # placeholder response (remove once your logic is ready)
+        return JsonResponse({"message": f"Hello {user}, you asked: {text}"})
+
+    except Exception as e:
+        # catch error and send it back in JSON
+        return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt  # remove if you handle CSRF with tokens
 def chat_front(request):
@@ -1707,8 +1723,6 @@ def chat_front(request):
         print("IMPORTANT ->", responds)
     else:
         user_contract_data = get_context_data(text, user)
-        print("final boss !!!!" * 100)
-        print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
 
         responds, all_data, responds_type = asking(user, text)
         if responds_type != "Review":
