@@ -359,24 +359,42 @@ def system_file_parser(query_vectors, user, base_path=settings.STATIC_UPLOAD_DIR
     return top_10_chunks, top_10_vectors, sorted_files_dict
 
 
+
 def get_case_tamplates(query_vectors):
-    mypath = settings.CONTRACT_TEMPALTES + "/"
+    import os
+    from django.conf import settings
+
+    mypath = os.path.join(settings.CONTRACT_TEMPALTES)  # safe path join
     parser = Parsers(settings.OPENAI_KEY)
 
+    # Ensure folder exists
+    if not os.path.exists(mypath):
+        print(f"[WARNING] ContractTemplates folder does not exist: {mypath}")
+        return [], [], {}
+
+    # Get all CSV files in folder
     files = allFileformat(mypath, ".csv")
-    print("this is case tempalte" * 19)
-    print(files)
-    print("this is case tempalte" * 19)
+    if not files:
+        print(f"[INFO] No CSV files found in ContractTemplates: {mypath}")
+        return [], [], {}
 
     files_data = {}
-
-    # Determine expected vector length from query_vector
     expected_len = len(query_vectors)
 
     for file in files:
-        chunks, vectors = parser.ReadFromFile(mypath + file)
+        file_path = os.path.join(mypath, file)
 
-        # Filter out vectors that do not match the expected length
+        if not os.path.exists(file_path):
+            print(f"[WARNING] File not found, skipping: {file_path}")
+            continue
+
+        try:
+            chunks, vectors = parser.ReadFromFile(file_path)
+        except Exception as e:
+            print(f"[ERROR] Failed to read file {file_path}: {e}")
+            continue
+
+        # Filter vectors matching expected length
         filtered_chunks = []
         filtered_vectors = []
         for c, v in zip(chunks, vectors):
@@ -384,28 +402,30 @@ def get_case_tamplates(query_vectors):
                 filtered_chunks.append(c)
                 filtered_vectors.append(v)
             else:
-                print(f"Skipping vector with invalid length in file {file}: {v}")
+                print(f"[INFO] Skipping vector with invalid length in {file}: {v}")
 
         if not filtered_vectors:
-            continue  # skip this file if no valid vectors
+            continue
 
-        chunkslist = []
-        vectorlist = []
-        total_score = 0
-
-        # Compute top3 similarity with filtered vectors
-        top3, similarity_score = parser.cosine_search_top3(filtered_vectors, query_vectors, 30)
+        chunkslist, vectorlist, total_score = [], [], 0
+        try:
+            top3, similarity_score = parser.cosine_search_top3(filtered_vectors, query_vectors, 30)
+        except Exception as e:
+            print(f"[ERROR] Cosine search failed for file {file}: {e}")
+            continue
 
         for idx in top3:
             chunkslist.append(filtered_chunks[idx])
             vectorlist.append(filtered_vectors[idx])
-            total_score += similarity_score  # accumulate relevance
+            total_score += similarity_score
 
         if chunkslist:
             addfiledata(files_data, file, chunkslist, vectorlist, total_score)
 
     top_10_chunks, top_10_vectors, sorted_files_dict = sort_data(files_data)
     return top_10_chunks, top_10_vectors, sorted_files_dict
+
+
 
 
 def get_case_tamplates2(query_vectors):
@@ -1909,7 +1929,7 @@ def chat_front2(request, user, query):
 @csrf_exempt
 def user_history_json(request, user):
     combined = [{"question": q, "answer": a} for q, a in user_history(user)]
-    return JsonResponse({"user": user, "history": combined})
+    return cors_json_response({"user": user, "history": combined})
 
 
 def chat(request, user):
