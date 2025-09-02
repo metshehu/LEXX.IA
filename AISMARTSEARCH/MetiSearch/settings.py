@@ -121,6 +121,9 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "https://lexx-ia-frontend.onrender.com",  # your frontend on Render
+    "https://lexx-ia-1.onrender.com",
+
     # add your real frontend origin if different in prod, e.g. "https://your-frontend.tld"
 ]
 
@@ -143,5 +146,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:8080",
     "https://lexx-ia.onrender.com",
     "https://*.onrender.com",
+    "https://lexx-ia-frontend.onrender.com",  # your frontend on Render
+    "https://lexx-ia-1.onrender.com"
+
+
 ]
 
