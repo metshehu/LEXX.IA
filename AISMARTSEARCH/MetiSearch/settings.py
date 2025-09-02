@@ -12,15 +12,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # === Custom Project Paths ===
 STATIC_UPLOAD_DIR = os.path.join(BASE_DIR, "static/uploads")
 BASE_LAWS = os.path.join(BASE_DIR, "static/BaseLaws")
-CONTRACT_TEMPALTES = os.path.join(BASE_DIR, "static/ContractTemplates")
+CONTRACT_TEMPLATES = os.path.join(BASE_DIR, "static/ContractTemplates")
 GENERATED_FILES = os.path.join(BASE_DIR, "static/Generated_File")
 INTERNAL_ACT = os.path.join(BASE_DIR, "static/Internal_Act")
-LEAGLEREVIEW = os.path.join(BASE_DIR, "static/LeaglReview")
+LEGAL_REVIEW = os.path.join(BASE_DIR, "static/LeaglReview")
 
 USER_INFO = False
 FILE = {}
 
 # === Security ===
+
 SECRET_KEY = "django-insecure-12)qzr@+vd$+cn_f20!yud2&)f^ghpau9n%87tar0s1lletp6-"
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
@@ -74,11 +75,29 @@ MIDDLEWARE = [
 
 # === CORS ===
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-
-    "https://168.231.81.181",  # prod frontend
+    "http://localhost:8080",            # local frontend
+    "https://lexx-ia.onrender.com",     # deployed frontend
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
 
 # === REST Framework ===
 REST_FRAMEWORK = {
