@@ -1674,6 +1674,86 @@ def download_file(request, user):
 
 
 # 🔥 Example usage:
+@csrf_exempt
+def chat_front(request):
+    if request.method != "POST":
+        return cors_json_response({"error": "Only POST requests are allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user = data.get("user")
+        text = data.get("query")  # question from POST body
+        if text:
+            text = unquote(text)
+
+        if not user or not text:
+            return cors_json_response(
+                {"error": "Missing 'user' or 'query' in request body"}, status=400
+            )
+
+        # Initialize variables
+        responds = ""
+        genered = False
+        responds_type = ""
+        mypath = f"{settings.STATIC_UPLOAD_DIR}/{user}"
+
+        # Fetch user contract state
+        state = ContractState.objects.filter(user=getuser(user)).first()
+
+        if not state or not state.user_info:
+            responds, all_data, responds_type = asking(user, text)
+        else:
+            user_contract_data = get_context_data(text, user)
+            responds, all_data, responds_type = asking(user, text)
+
+            if responds_type != "Review":
+                responds = genert_proerpt_contrext(user_contract_data, user)
+                json_respons = generate_legal_doc_json(responds, user)
+                savedocx = json_to_docx(json_respons, filename="legal.docx", subfolder=user)
+                genered = True
+
+            # Reset state
+            state.fields = ""
+            state.file = ""
+            state.user_info = False
+            state.save()
+
+        # Save chat history
+        if responds_type == "Review":
+            responds2 = "\n-----\n".join(
+                f"Batch {batch['batch']}:\nFiles: {', '.join(batch['files'])}\n\n{batch['review']}"
+                for batch in responds
+            )
+            chat_message = History(sender=user, question=text, respons=responds2)
+        else:
+            chat_message = History(sender=user, question=text, respons=responds)
+
+        chat_message.save()
+        saveHitoryChunsk(chat_message, all_data)
+
+        # Collect user files
+        pdf_files = allFileformat(mypath, ".pdf")
+        word_files = allFileformat(mypath, ".docx")
+        files = pdf_files + word_files
+
+        combined = [{"question": q, "answer": a} for q, a in user_history(user)]
+
+        return cors_json_response(
+            {
+                "answer": responds,
+                "history": combined,
+                "Generted": genered,
+                "type": responds_type,
+                "files": files,
+            }
+        )
+
+    except json.JSONDecodeError:
+        return cors_json_response({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        # Catch-all error for production-safe JSON response
+        return cors_json_response({"error": str(e)}, status=500)
+
 
 @csrf_exempt
 def chat_front3(request):
@@ -1692,8 +1772,9 @@ def chat_front3(request):
         # catch error and send it back in JSON
         return JsonResponse({"error": str(e)}, status=500)
 
+
 @csrf_exempt  # remove if you handle CSRF with tokens
-def chat_front(request):
+def chat_frontog(request):
     if request.method != "POST":
         return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
 

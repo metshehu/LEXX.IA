@@ -203,10 +203,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
 
        try {
-        const fd = new FormData();
-        fd.append("user", username);
-        fd.append("query", encodedQuery)
- 
             const response = await fetch(url, {
                 method: "POST",
                 body: JSON.stringify({
@@ -216,6 +212,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             });
 
             const data = await response.json();
+
+            console.log("yoooo wtf ");
+            console.log(data);
 
             if (data.Generted) {
                 console.log("✅ CONTRACT GENERATED READY — SHOWING BUTTON");
