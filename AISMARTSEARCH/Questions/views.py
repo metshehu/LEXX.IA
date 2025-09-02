@@ -876,7 +876,7 @@ def convert_ndarray_to_list(obj):
         return obj
 
 
-def context_aware_responses(query, law_data, ak_data, case_data, data, user):
+def context_aware_responses(query, law_data, ak_data, data, user):
     # openai.api_key = settings.OPENAI_K
     temp = gettemp(user)
     client = OpenAI(api_key=settings.OPENAI_KEY)
@@ -1249,7 +1249,6 @@ def asking(user, query):
         query=query,
         law_data=top_law_chunks,
         ak_data=top_ak_chunks,
-        case_data=top_case_chunks,
         data=contract_info,
         user=user,
     )

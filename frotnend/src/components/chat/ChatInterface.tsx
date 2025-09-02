@@ -200,6 +200,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         }
 
         const url = "https://lexx-ia.onrender.com/api/questions/"; // new POST endpoint
+        //const url = "http://127.0.0.1:8000/api/questions/"; // new POST endpoint
 
 
        try {
