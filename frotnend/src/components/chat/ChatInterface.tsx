@@ -43,7 +43,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
             let username = localStorage.getItem("name");
             if (!username) {
-                username = "NardiTest";
+                username = "qerimqerimAi";
                 localStorage.setItem("name", username);
             }
 
@@ -73,6 +73,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 );
 
                 setMessages(historyMessages);
+                if(username=="qerimqerimAi"){
+                    setMessages(mockChatMessages)
+                }
             } catch (err) {
                 console.error("Error fetching chat history:", err);
             }
