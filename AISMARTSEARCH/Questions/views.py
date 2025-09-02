@@ -265,14 +265,11 @@ def addfiledata(dic, file_name, chunks, vectors, sim_score):
 
 
 def sort_data(files_data):
-    sorted_files = sorted(files_data.items(),
-                          key=lambda item: item[1]["score"], reverse=True)
+    sorted_files = sorted(files_data.items(), key=lambda item: item[1]["score"], reverse=True)
     top_10_files = sorted_files[:10]
-    top_10_chunks = list(chain.from_iterable(
-        item[1]["chunks"] for item in top_10_files))
+    top_10_chunks = list(chain.from_iterable(item[1]["chunks"] for item in top_10_files))
 
-    top_10_vectors = list(chain.from_iterable(
-        item[1]["vectors"] for item in top_10_files))
+    top_10_vectors = list(chain.from_iterable(item[1]["vectors"] for item in top_10_files))
 
     sorted_files_dict = collections.OrderedDict(top_10_files)
 
@@ -290,14 +287,12 @@ def system_file_parserT(querry_vector, user, base_path=settings.STATIC_UPLOAD_DI
     for i in files:
         chunks, vectors = parser.ReadFromFile(mypath + i)
         # closest_index = parser.cosine_search(vectors, querry_vector)
-        top3, similariti_score = parser.cosine_search_top3(
-            vectors, querry_vector, 40)
+        top3, similariti_score = parser.cosine_search_top3(vectors, querry_vector, 40)
         for j in top3:
             chunkslist.append(chunks[j])
             vectorlist.append(vectors[j])
         if len(chunkslist) > 0:
-            addfiledata(files_data, i, chunkslist,
-                        vectorlist, similariti_score)
+            addfiledata(files_data, i, chunkslist, vectorlist, similariti_score)
 
             # print(files_data[i]['chunks'], files_data[i]['score'])
 
@@ -319,14 +314,12 @@ def system_file_parser_law(querry_vector, user, base_path=settings.BASE_LAWS):
     for i in files:
         chunks, vectors = parser.ReadFromFile(mypath + i)
         # closest_index = parser.cosine_search(vectors, querry_vector)
-        top3, similariti_score = parser.cosine_search_top3(
-            vectors, querry_vector, 30)
+        top3, similariti_score = parser.cosine_search_top3(vectors, querry_vector, 30)
         for j in top3:
             chunkslist.append(chunks[j])
             vectorlist.append(vectors[j])
         if len(chunkslist) > 0:
-            addfiledata(files_data, i, chunkslist,
-                        vectorlist, similariti_score)
+            addfiledata(files_data, i, chunkslist, vectorlist, similariti_score)
 
             # print(files_data[i]['chunks'], files_data[i]['score'])
 
@@ -353,8 +346,7 @@ def system_file_parser(query_vectors, user, base_path=settings.STATIC_UPLOAD_DIR
 
         # Loop over each vector from legal context
         for law_vector in query_vectors:
-            top3, similarity_score = parser.cosine_search_top3(
-                vectors, law_vector, 30)
+            top3, similarity_score = parser.cosine_search_top3(vectors, law_vector, 30)
             for idx in top3:
                 chunkslist.append(chunks[idx])
                 vectorlist.append(vectors[idx])
@@ -392,8 +384,7 @@ def get_case_tamplates(query_vectors):
                 filtered_chunks.append(c)
                 filtered_vectors.append(v)
             else:
-                print(
-                    f"Skipping vector with invalid length in file {file}: {v}")
+                print(f"Skipping vector with invalid length in file {file}: {v}")
 
         if not filtered_vectors:
             continue  # skip this file if no valid vectors
@@ -403,8 +394,7 @@ def get_case_tamplates(query_vectors):
         total_score = 0
 
         # Compute top3 similarity with filtered vectors
-        top3, similarity_score = parser.cosine_search_top3(
-            filtered_vectors, query_vectors, 30)
+        top3, similarity_score = parser.cosine_search_top3(filtered_vectors, query_vectors, 30)
 
         for idx in top3:
             chunkslist.append(filtered_chunks[idx])
@@ -434,8 +424,7 @@ def get_case_tamplates2(query_vectors):
         total_score = 0
 
         # Loop over each vector from legal context
-        top3, similarity_score = parser.cosine_search_top3(
-            vectors, query_vectors, 30)
+        top3, similarity_score = parser.cosine_search_top3(vectors, query_vectors, 30)
         for idx in top3:
             chunkslist.append(chunks[idx])
             vectorlist.append(vectors[idx])
@@ -462,8 +451,7 @@ def get_case_files(query_vectors):
 
         # Loop over each vector from legal context
         for law_vector in query_vectors:
-            top3, similarity_score = parser.cosine_search_top3(
-                vectors, law_vector, 30)
+            top3, similarity_score = parser.cosine_search_top3(vectors, law_vector, 30)
             for idx in top3:
                 chunkslist.append(chunks[idx])
                 vectorlist.append(vectors[idx])
@@ -486,12 +474,10 @@ lets do it darlings
 def Get_aktin_i_brendshem_data(querry_vector):
     parser = Parsers(settings.OPENAI_KEY)  # ✅
     top_law_chunks, top_law_vector = parser.ReadFromFile(
-        settings.BASE_LAWS + "/" +
-        "Draft Akti i Brendshëm - Kosove (7) (1).csv"
+        settings.BASE_LAWS + "/" + "Draft Akti i Brendshëm - Kosove (7) (1).csv"
     )
 
-    top3, similariti_score = parser.cosine_search_top3(
-        top_law_vector, querry_vector, 30)
+    top3, similariti_score = parser.cosine_search_top3(top_law_vector, querry_vector, 30)
     chunkslist = []
     vectorlist = []
     for j in top3:
@@ -503,11 +489,9 @@ def Get_aktin_i_brendshem_data(querry_vector):
 
 def Get_law_data(querry_vector):
     parser = Parsers(settings.OPENAI_KEY)  # ✅
-    top_law_chunks, top_law_vector = parser.ReadFromFile(
-        settings.BASE_LAWS + "/" + "LIGJI__NR.csv")
+    top_law_chunks, top_law_vector = parser.ReadFromFile(settings.BASE_LAWS + "/" + "LIGJI__NR.csv")
 
-    top3, similariti_score = parser.cosine_search_top3(
-        top_law_vector, querry_vector, 30)
+    top3, similariti_score = parser.cosine_search_top3(top_law_vector, querry_vector, 30)
     chunkslist = []
     vectorlist = []
     for j in top3:
@@ -551,7 +535,7 @@ def addReview_one(user, filename, messages):
 def chunk_list(lst, n):
     """Split list into chunks of size n (last batch may be smaller)."""
     for i in range(0, len(lst), n):
-        yield lst[i: i + n]
+        yield lst[i : i + n]
 
 
 def review_in_batches(user, query, client):
@@ -626,8 +610,7 @@ def review_in_batches(user, query, client):
         )
 
         response_message = res.choices[0].message
-        responses.append({"batch": idx, "files": file_group,
-                         "review": response_message.content})
+        responses.append({"batch": idx, "files": file_group, "review": response_message.content})
 
     return responses
 
@@ -744,8 +727,7 @@ def addContext(data, message):
     for file_name, content in data.items():
         # print(file_name + '-' * 20)
 
-        chunks = "\n".join(
-            [f"```text\n{chunk}\n```" for chunk in content["chunks"]])
+        chunks = "\n".join([f"```text\n{chunk}\n```" for chunk in content["chunks"]])
 
         newdic = {
             "role": "system",
@@ -972,20 +954,16 @@ def context_aware_responses(query, law_data, ak_data, case_data, data, user):
                 allstring = []
 
                 for i in files:
-                    contract_state, _ = ContractState.objects.get_or_create(
-                        user=getuser(user))
+                    contract_state, _ = ContractState.objects.get_or_create(user=getuser(user))
 
                     # serialize the dict to a JSON string
-                    safe_data = convert_ndarray_to_list(
-                        files[i])  # convert all ndarrays to lists
+                    safe_data = convert_ndarray_to_list(files[i])  # convert all ndarrays to lists
 
-                    contract_state.file = json.dumps(
-                        safe_data, ensure_ascii=False)
+                    contract_state.file = json.dumps(safe_data, ensure_ascii=False)
                     contract_state.save()
 
                     print("<---3, ", i)
-                    chu, vec = parser.ReadFromFile(
-                        settings.CONTRACT_TEMPALTES + "/" + i)
+                    chu, vec = parser.ReadFromFile(settings.CONTRACT_TEMPALTES + "/" + i)
                     allstring.append((i, " ".join(chu)))
                     break
 
@@ -999,20 +977,16 @@ def context_aware_responses(query, law_data, ak_data, case_data, data, user):
                 )
 
                 response_message = res.choices[0].message
-                required_fields = res.choices[0].message.content.strip().split(
-                    ",")
-                required_fields = [field.strip()
-                                   for field in required_fields if field.strip()]
+                required_fields = res.choices[0].message.content.strip().split(",")
+                required_fields = [field.strip() for field in required_fields if field.strip()]
 
                 # if len(required_fields) > 0:
                 #    settings.USER_INFO = True
                 #    settings.FIELDS = "\n".join(f"- {field}" for field in required_fields)
                 if len(required_fields) > 0:
-                    contract_state, _ = ContractState.objects.get_or_create(
-                        user=getuser(user))
+                    contract_state, _ = ContractState.objects.get_or_create(user=getuser(user))
                     contract_state.user_info = True
-                    contract_state.fields = "\n".join(
-                        f"- {field}" for field in required_fields)
+                    contract_state.fields = "\n".join(f"- {field}" for field in required_fields)
                     contract_state.save()
 
                 print(required_fields)
@@ -1129,8 +1103,7 @@ def delet_file(request, user, filename, fileType):
         base_path = settings.INTERNAL_ACT
 
     file_path = os.path.join(base_path, user, filename)
-    csv_path = os.path.join(
-        base_path, user, filename.rsplit(".", 1)[0] + ".csv")
+    csv_path = os.path.join(base_path, user, filename.rsplit(".", 1)[0] + ".csv")
 
     if os.path.exists(file_path) and os.path.exists(csv_path):
         os.remove(file_path)
@@ -1142,8 +1115,7 @@ def delet_file(request, user, filename, fileType):
 
 
 def delet_photo(user):
-    user_photos_path = os.path.join(
-        settings.BASE_DIR, "static/userphotos", f"{user}.png")
+    user_photos_path = os.path.join(settings.BASE_DIR, "static/userphotos", f"{user}.png")
     if os.path.exists(user_photos_path):
         os.remove(user_photos_path)
         print(f"File '{user_photos_path}' has been deleted.")
@@ -1223,8 +1195,7 @@ def askingT(user, query):
     chunks, vectors, contract_info = system_file_parser(query_vector, user)
     history = user_history(user)
     pastQuestion, pastAnswe = unpack_history(history)
-    res = context_aware_responses(
-        query, pastQuestion, pastAnswe, contract_info, user)
+    res = context_aware_responses(query, pastQuestion, pastAnswe, contract_info, user)
     return (res, contract_info)
 
 
@@ -1246,10 +1217,12 @@ def get_all_base_laws():
         break
     return files
 
+
 def cors_json_response(data, status=200):
     response = JsonResponse(data, status=status, safe=False)
     response["Access-Control-Allow-Origin"] = "*"
     return response
+
 
 def asking(user, query):
     parser = Parsers(settings.OPENAI_KEY)
@@ -1257,7 +1230,7 @@ def asking(user, query):
     top_law_chunks, top_law_vector, sorted_law_files = system_file_parser_law(
         query_vector, user
     )  # Get_law_data(query_vector)
-    #top_law_chunks2, top_law_vector2 = Get_law_data(query_vector)
+    # top_law_chunks2, top_law_vector2 = Get_law_data(query_vector)
     top_ak_chunks, top_ak_chnks, sorted_akt_files = system_file_parserT(
         query_vector, user, settings.INTERNAL_ACT
     )  # Get_aktin_i_brendshem_data(query_vector)
@@ -1331,8 +1304,7 @@ def chat_leagl(request, user):
     files = []
     combined = []
     responds = []
-    context = {"user": user, "answer": responds,
-               "files": files, "combined": combined}
+    context = {"user": user, "answer": responds, "files": files, "combined": combined}
 
     return render(request, "chat.html", context)
 
@@ -1371,8 +1343,7 @@ def get_context_data(text, user):
 
 def genert_proerpt_contrext2(text):
 
-    chunks = "\n".join(
-        [f"\n{chunk}\n```" for chunk in settings.FILE["chunks"]])
+    chunks = "\n".join([f"\n{chunk}\n```" for chunk in settings.FILE["chunks"]])
     system_prompt = f"""
     You are a legal assistant that drafts professional contracts.
     Below you have a contract template (or parts of it):
@@ -1562,13 +1533,11 @@ def write_string_to_pdf(content: str, filename: str = "demo.pdf", subfolder: str
     story = []
 
     # Custom styles
-    heading_style = ParagraphStyle(
-        "Heading", parent=styles["Heading2"], spaceAfter=10)
+    heading_style = ParagraphStyle("Heading", parent=styles["Heading2"], spaceAfter=10)
     normal_style = styles["Normal"]
     bullet_style = styles["Bullet"]
 
-    lines = [line.strip() for line in content.splitlines()
-             if line.strip()]  # remove empty lines
+    lines = [line.strip() for line in content.splitlines() if line.strip()]  # remove empty lines
 
     for line in lines:
         if line.startswith("- "):
@@ -1591,8 +1560,7 @@ def write_string_to_docx(content: str, filename: str = "demo.docx", subfolder: s
     full_path = os.path.join(output_dir, filename)
 
     document = Document()
-    lines = [line.strip() for line in content.splitlines()
-             if line.strip()]  # remove empty lines
+    lines = [line.strip() for line in content.splitlines() if line.strip()]  # remove empty lines
 
     for line in lines:
         if line.startswith("- "):
@@ -1747,8 +1715,7 @@ def chat_front(request):
             responds = genert_proerpt_contrext(user_contract_data, user)
 
             json_respons = generate_legal_doc_json(responds, user)
-            savedocx = json_to_docx(
-                json_respons, filename="legal.docx", subfolder=user)
+            savedocx = json_to_docx(json_respons, filename="legal.docx", subfolder=user)
             print(savedocx, "IS THIS THE RELEVT PATH ??")
             genered = True
 
@@ -1791,9 +1758,8 @@ def chat_front(request):
         print("2<=>2 " * 10)
         print(len(responds))
         print("2<=>2 " * 10)
-    return JsonResponse(
-        {"answer": responds, "history": combined,
-            "Generted": genered, "type": responds_type}
+    return cors_json_response(
+        {"answer": responds, "history": combined, "Generted": genered, "type": responds_type}
     )
 
 
@@ -1810,16 +1776,14 @@ def chat_front2(request, user, query):
         else:
             user_contract_data = get_context_data(text, user)
             print("final boss !!!!" * 100)
-            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ",
-                  user_contract_data)
+            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
 
             responds, all_data = asking(user, text)
             responds = genert_proerpt_contrext(user_contract_data, user)
 
             json_respons = generate_legal_doc_json(responds, user)
 
-            savedocx = json_to_docx(
-                json_respons, filename="legal.docx", subfolder=user)
+            savedocx = json_to_docx(json_respons, filename="legal.docx", subfolder=user)
             print(savedocx, "IS THIS THE RELEVT PATH ??")
 
             # save = write_string_to_docx(responds)
@@ -1843,8 +1807,7 @@ def chat_front2(request, user, query):
         word_files = allFileformat(mypath, ".docx")
         files = pdf_files + word_files
 
-        combined = [{"question": q, "answer": a}
-                    for q, a in user_history(user)]
+        combined = [{"question": q, "answer": a} for q, a in user_history(user)]
 
     return JsonResponse({"answer": responds, "history": combined, "Generted": genered})
 
@@ -1869,8 +1832,7 @@ def chat(request, user):
             state2 = ContractState.objects.filter(user=getuser(user)).first()
             user_contract_data = get_context_data(text, user)
             print("final boss !!!!" * 100)
-            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ",
-                  user_contract_data)
+            print("YAYYY WE EXTREAD ALL THE INFO WE NEED IT YAYYYY ", user_contract_data)
             # responds, all_data = genert_template(user, user_contract_data):
 
             responds, all_data = asking(user, text)
@@ -1899,8 +1861,7 @@ def chat(request, user):
     files = pdf_files + word_files
 
     combined = user_history(user)
-    context = {"user": user, "answer": responds,
-               "files": files, "combined": combined}
+    context = {"user": user, "answer": responds, "files": files, "combined": combined}
     return render(request, "chat.html", context)
 
 
@@ -1960,8 +1921,7 @@ def makedir_internal_akt(user_name):
 
 def makedir(user_name):
     # print(user_name)
-    target_dir = os.path.join(
-        settings.BASE_DIR, "static", "uploads", user_name)
+    target_dir = os.path.join(settings.BASE_DIR, "static", "uploads", user_name)
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
         print(f"Directory {user_name} created at {target_dir}")
@@ -2038,8 +1998,7 @@ def save_file(uploaded_file, user):
     fileChunks, fileEmbedings = parser.embedd(file_url)
 
     parser.SaveCsv(
-        settings.STATIC_UPLOAD_DIR + "/" +
-        user, uploaded_file.name, fileEmbedings, fileChunks
+        settings.STATIC_UPLOAD_DIR + "/" + user, uploaded_file.name, fileEmbedings, fileChunks
     )
     return fileEmbedings
 
@@ -2048,8 +2007,7 @@ def save_file(uploaded_file, user):
 def fileupload(request, user):
     if request.method == "POST" and request.FILES["file"]:
         uploaded_file = request.FILES["file"]
-        my_file = Path(
-            f"{settings.STATIC_UPLOAD_DIR}/{user}/{uploaded_file.name}")
+        my_file = Path(f"{settings.STATIC_UPLOAD_DIR}/{user}/{uploaded_file.name}")
         if not my_file.is_file():
             save_file(uploaded_file, user)
             return redirect(f"/chat/{user}/")
