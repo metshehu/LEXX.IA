@@ -21,7 +21,6 @@ BASE_LAWS = os.path.join(BASE_DIR, "static/BaseLaws")
 CONTRACT_TEMPALTES = os.path.join(BASE_DIR, "static/ContractTemplates")
 
 
-
 GENERATED_FILES = os.path.join(BASE_DIR, "static/Generated_File")
 
 INTERNAL_ACT = os.path.join(BASE_DIR, "static/Internal_Act")
@@ -40,8 +39,7 @@ SECRET_KEY = "django-insecure-12)qzr@+vd$+cn_f20!yud2&)f^ghpau9n%87tar0s1lletp6-
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY")  # Define media settings
 print(OPENAI_KEY)
 if not OPENAI_KEY:
-    raise ValueError(
-        "OpenAI API key is not set. Please add it to your environment variables.")
+    raise ValueError("OpenAI API key is not set. Please add it to your environment variables.")
 
 FILE = {}
 MEDIA_URL = "/media/"  # URL for accessing uploaded files
@@ -62,6 +60,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # Collected static files
 # Application definition
 
 INSTALLED_APPS = [
+    "corsheaders",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -70,24 +69,19 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework_simplejwt",
     "Questions",
-    "corsheaders",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # <--- add here
+    "corsheaders.middleware.CorsMiddleware",  # 👈 MUST BE FIRST
+    "django.middleware.common.CommonMiddleware",  # 👈 keep just after
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",  # your frontend dev server
-
-]
-
+#CORS_ALLOWED_ORIGINS = [ "http://localhost:8080",  # your frontend dev server ]
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "MetiSearch.urls"
