@@ -1161,7 +1161,7 @@ def get_files(request, user, fileType):
     docx_files = allFileformat(mypath, ".docx")
 
     all_files = pdf_files + docx_files
-    return JsonResponse({"users": all_files})
+    return cors_json_response({"users": all_files})
 
 
 def delet_user(request, user):
@@ -1246,6 +1246,10 @@ def get_all_base_laws():
         break
     return files
 
+def cors_json_response(data, status=200):
+    response = JsonResponse(data, status=status, safe=False)
+    response["Access-Control-Allow-Origin"] = "*"
+    return response
 
 def asking(user, query):
     parser = Parsers(settings.OPENAI_KEY)
@@ -1259,7 +1263,6 @@ def asking(user, query):
     )  # Get_aktin_i_brendshem_data(query_vector)
 
     chunks, vectors, contract_info = system_file_parser(top_law_vector, user)
-
 
     for i in contract_info:
         print(i)
