@@ -81,7 +81,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
-CORS_ALLOWED_ORIGINS = [ "http://localhost:8080/","http://192.168.1.18:8080/"]# your frontend dev server ]
+CORS_ALLOWED_ORIGINS = [ "http://localhost:8080","http://192.168.1.18:8080"]# your frontend dev server ]
 CORS_ALLOW_CREDENTIALS = True
 
 
