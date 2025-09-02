@@ -894,7 +894,7 @@ def convert_ndarray_to_list(obj):
         return obj
 
 
-def context_aware_responses(query, law_data, ak_data, case_data, data, case_info, user):
+def context_aware_responses(query, law_data, ak_data, case_data, data, user):
     # openai.api_key = settings.OPENAI_K
     temp = gettemp(user)
     client = OpenAI(api_key=settings.OPENAI_KEY)
@@ -1260,8 +1260,6 @@ def asking(user, query):
 
     chunks, vectors, contract_info = system_file_parser(top_law_vector, user)
 
-    top_case_chunks, top_case_vectors, case_info = get_case_files(
-        top_law_vector)
 
     for i in contract_info:
         print(i)
@@ -1277,7 +1275,6 @@ def asking(user, query):
         ak_data=top_ak_chunks,
         case_data=top_case_chunks,
         data=contract_info,
-        case_info=case_info,
         user=user,
     )
     return (res, contract_info, res_type)

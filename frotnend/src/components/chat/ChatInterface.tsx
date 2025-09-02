@@ -201,12 +201,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         const url = "https://lexx-ia.onrender.com/api/questions/"; // new POST endpoint
 
-        try {
+
+       try {
+        const fd = new FormData();
+        fd.append("user", username);
+        fd.append("query", encodedQuery)
+ 
             const response = await fetch(url, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
                 body: JSON.stringify({
                     user: username,
                     query: encodedQuery, // send original text (or decoded) here
