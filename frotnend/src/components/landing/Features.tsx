@@ -65,6 +65,7 @@ const Features = () => {
             className="mt-4 text-[#ffbdbd] text-lg max-w-xl animate-slide-up"
             style={{ animationDelay: "0.4s" }}
           >
+           
             <span className="text-black font-semibold">Lexxia Legal AI </span> 
             automates the organization of contracts, agreements, and
             supporting files, creating a unified repository for your legal data

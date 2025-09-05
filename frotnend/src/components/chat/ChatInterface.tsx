@@ -73,8 +73,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 );
 
                 setMessages(historyMessages);
-                if(username=="qerimqerimAi"){
-                    setMessages(mockChatMessages)
+                if (username == "qerimqerimAi") {
+                    setMessages(mockChatMessages);
                 }
             } catch (err) {
                 console.error("Error fetching chat history:", err);
@@ -205,8 +205,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const url = "https://lexx-ia.onrender.com/api/questions/"; // new POST endpoint
         //const url = "http://127.0.0.1:8000/api/questions/"; // new POST endpoint
 
-
-       try {
+        try {
             const response = await fetch(url, {
                 method: "POST",
                 body: JSON.stringify({
@@ -350,22 +349,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
             {/* Input */}
             <div className="p-4 border-t border-border/40 bg-gray-50">
-                <form onSubmit={handleSendMessage} className="flex space-x-2">
-                    <Input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Type your message..."
-                        className="flex-1 border-gray-300 focus:border-[#f5474e] focus:ring-[#f5474e]"
-                        disabled={isLoading}
-                    />
-                    <CustomButton
-                        type="submit"
-                        disabled={!input.trim() || isLoading}
-                        size="icon"
-                        className="bg-[#f5474e] hover:bg-[#d93c44]"
-                    >
-                        <Send className="h-4 w-4" />
-                    </CustomButton>
+                <form onSubmit={handleSendMessage} className="flex flex-col space-y-1">
+                    <div className="flex space-x-2">
+                        <Input
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Type your message..."
+                            className="flex-1 border-gray-300 focus:border-[#f5474e] focus:ring-[#f5474e]"
+                            disabled={isLoading}
+                        />
+                        <CustomButton
+                            type="submit"
+                            disabled={!input.trim() || isLoading}
+                            size="icon"
+                            className="bg-[#f5474e] hover:bg-[#d93c44]"
+                        >
+                            <Send className="h-4 w-4" />
+                        </CustomButton>
+                    </div>
+
+                    {/* 👇 Small helper text */}
+                    <span className="text-xs text-gray-500 mt-2 text-center">
+                        LEXX.IA can make mistakes. Check important info.
+                    </span>
                 </form>
             </div>
         </Card>

@@ -71,8 +71,8 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
             name: "Services",
             path: "/about",
             dropdown: [
-                { name: "Consulting", path: "/chat" },
-                { name: "Case Review", path: "/chat" },
+                { name: "Consulting", path: "/about" },
+                { name: "Case Review", path: "/about" },
                 { name: "AI Tools", path: "/about" },
             ],
         },
@@ -106,7 +106,6 @@ const Header: React.FC<HeaderProps> = ({ isSignInOpen, setIsSignInOpen }) => {
 
                 {/* Center title */}
                 <span className="text-2xl font-bold tracking-widest text-black">
-                    LEGAL.<span className="text-white">Ai</span>
                 </span>
 
                 {/* Desktop nav */}

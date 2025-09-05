@@ -19,11 +19,7 @@ const About: React.FC<AboutProps> = ({ isSignInOpen, setIsSignInOpen }) => {
             <span className="text-[#FB3956]">Mission</span>
           </h1>
           <p className="text-lg text-gray-100 leading-relaxed max-w-3xl mx-auto">
-            We are committed to turning complexity into clarity. Our mission is
-            to empower businesses and individuals with AI-driven solutions that
-            make legal, hiring, and operational decisions faster, smarter, and
-            more reliable — ensuring that every choice you make is backed by
-            precision and insight.
+                        Our AI-based services are designed to enhance and elevate your expertise, not replace it. While we leverage advanced technology and carefully crafted tools to assist with in-depth legal research, comprehensive document analysis, and other specialized services, the insights and recommendations provided should be viewed as complementary resources rather than a substitute for human knowledge, judgment, and professional experience. The true value of our platform lies in its ability to streamline processes, refine decision-making, and empower you to focus on the nuances and complexities that only human expertise can address. Ultimately, we help legal professionals do what only they can: think critically, act ethically, and advocate effectively. In line with our motto: “We seek to perfect, not substitute you.”
           </p>
         </section>
 
